@@ -102,3 +102,14 @@ export type PublicInfluencer = Influencer & { groupIds: number[] };
 export type SponsorTag = { groupId: number; handle: string; name: string; platforms: string[] };
 
 export type OAuthProvider = { platform: string; label: string; enabled: boolean };
+
+export type Shipping = { name: string; phone: string; zip: string; address1: string; address2: string };
+
+export type UserProfile = {
+  address: `0x${string}`;
+  nickname: string;
+  contact: string;
+  shipping: Shipping | null;
+  /** 체인에 올리는 배송지 해시 (솔트 포함). 배송지가 없으면 null */
+  recipientHash: `0x${string}` | null;
+};

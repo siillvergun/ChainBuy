@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { WalletButton } from "./WalletButton";
+import { AccountMenu } from "./AccountMenu";
 import { useAuth } from "./AuthProvider";
 
 const NAV = [
@@ -29,7 +29,7 @@ export function Header() {
       <header className="border-b border-line bg-white">
         <div className="mx-auto max-w-page px-4 md:px-6">
           <div className="flex flex-wrap justify-end gap-4 pt-2.5 text-[13px] text-[#4A4A4A]">
-            <WalletButton />
+            <AccountMenu />
             <Link href="/seller" className="hover:text-ink">
               판매자센터
             </Link>
@@ -77,7 +77,7 @@ export function Header() {
                 공동구매 열기
               </Link>
               <Link href="/my" className="btn-primary">
-                내 참여
+                마이페이지
               </Link>
             </div>
           </div>
