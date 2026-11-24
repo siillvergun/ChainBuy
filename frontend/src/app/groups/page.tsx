@@ -64,7 +64,17 @@ function GroupList() {
     <div className="mx-auto flex max-w-page flex-col gap-6 px-4 py-8 md:px-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-[28px] font-extrabold tracking-tight">
-          {q ? `'${q}' 검색 결과` : today ? "오늘 마감" : "전체 공구"}
+          {q
+            ? `'${q}' 검색 결과`
+            : today
+              ? "오늘 마감"
+              : kind === "listed"
+                ? "판매자 특가"
+                : kind === "external"
+                  ? "추천 공구"
+                  : sp.get("sort") === "popular"
+                    ? "인기 공구"
+                    : "전체 공구"}
         </h1>
         <span className="text-sm text-muted">{list.length}개</span>
       </div>

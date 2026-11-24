@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { WalletButton } from "./WalletButton";
 
 const NAV = [
@@ -74,22 +74,48 @@ export function Header() {
               </Link>
             </div>
           </div>
-          <nav aria-label="공동구매 분류" className="-mb-px flex gap-7 overflow-x-auto text-[15px] font-bold">
-            {NAV.map((n) => {
-              const active = n.href === "/" ? pathname === "/" : n.href === "/groups" && pathname === "/groups";
-              return (
-                <Link
-                  key={n.label}
-                  href={n.href}
-                  className={`whitespace-nowrap border-b-2 py-2.5 ${active ? "border-ink text-ink" : "border-transparent text-[#4A4A4A] hover:text-ink"}`}
-                >
-                  {n.label}
-                </Link>
-              );
-            })}
-          </nav>
+          <Suspense fallback={<NavLinks pathname={pathname} params={null} />}>
+            <NavWithParams pathname={pathname} />
+          </Suspense>
         </div>
       </header>
     </>
+  );
+}
+
+function NavWithParams({ pathname }: { pathname: string }) {
+  const params = useSearchParams();
+  return <NavLinks pathname={pathname} params={params} />;
+}
+
+/** 현재 주소(경로 + 쿼리)에 맞는 메뉴 하나만 밑줄로 표시한다 */
+function activeLabel(pathname: string, params: URLSearchParams | null): string | null {
+  if (pathname === "/") return "홈";
+  if (pathname !== "/groups") return null;
+  if (params?.get("filter") === "today") return "오늘 마감";
+  if (params?.get("kind") === "listed") return "판매자 특가";
+  if (params?.get("kind") === "external") return "추천 공구";
+  if (params?.get("sort") === "popular") return "인기 공구";
+  return "전체 공구";
+}
+
+function NavLinks({ pathname, params }: { pathname: string; params: URLSearchParams | null }) {
+  const current = activeLabel(pathname, params);
+  return (
+    <nav aria-label="공동구매 분류" className="-mb-px flex gap-7 overflow-x-auto text-[15px] font-bold">
+      {NAV.map((n) => {
+        const active = n.label === current;
+        return (
+          <Link
+            key={n.label}
+            href={n.href}
+            aria-current={active ? "page" : undefined}
+            className={`whitespace-nowrap border-b-2 py-2.5 ${active ? "border-ink text-ink" : "border-transparent text-[#4A4A4A] hover:text-ink"}`}
+          >
+            {n.label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
