@@ -5,13 +5,13 @@ import { deployFixture, Status, Kind, SELLER_ID, MERCHANT_ID, MAX_PRICE, FEE_BPS
 
 describe("01. 공구 생성 · 참여 · 마감 · 미달 환불", () => {
   describe("공구 생성", () => {
-    it("입점 상품: 누구나 열 수 있고, 결제 대상·수수료율이 등록부 값으로 고정된다 (GB-01, GB-04, GB-05)", async () => {
-      const { chainBuy, creator, seller, createListed } = await loadFixture(deployFixture);
+    it("입점 상품: 판매자가 열고, 결제 대상·수수료율이 등록부 값으로 고정된다 (GB-01, GB-04, GB-05)", async () => {
+      const { chainBuy, seller, createListed } = await loadFixture(deployFixture);
       const id = await createListed();
       const g = await chainBuy.getGroup(id);
       expect(g.kind).to.equal(Kind.LISTED);
       expect(g.status).to.equal(Status.OPEN);
-      expect(g.creator).to.equal(creator.address);
+      expect(g.creator).to.equal(seller.address);
       expect(g.payee).to.equal(seller.address);
       expect(g.feeBps).to.equal(FEE_BPS);
     });
@@ -29,15 +29,25 @@ describe("01. 공구 생성 · 참여 · 마감 · 미달 환불", () => {
       expect(g.payee).to.equal(cardIssuer.address);
     });
 
+    it("판매자 본인 지갑이 아니면 입점 상품 공구를 열 수 없다 (중복 공구 방지)", async () => {
+      const { chainBuy, creator, mallory, params } = await loadFixture(deployFixture);
+      for (const who of [creator, mallory]) {
+        await expect(chainBuy.connect(who).createListedGroup(SELLER_ID, await params())).to.be.revertedWithCustomError(
+          chainBuy,
+          "NotSeller"
+        );
+      }
+    });
+
     it("등록되지 않았거나 정지된 판매자·쇼핑몰로는 만들 수 없다", async () => {
       const { chainBuy, reviewer, admin, creator, seller, cardIssuer, params } = await loadFixture(deployFixture);
       await expect(
-        chainBuy.connect(creator).createListedGroup(ethers.id("unknown"), await params())
+        chainBuy.connect(seller).createListedGroup(ethers.id("unknown"), await params())
       ).to.be.revertedWithCustomError(chainBuy, "InactiveParty");
 
       await chainBuy.connect(reviewer).setSeller(SELLER_ID, seller.address, false);
       await expect(
-        chainBuy.connect(creator).createListedGroup(SELLER_ID, await params())
+        chainBuy.connect(seller).createListedGroup(SELLER_ID, await params())
       ).to.be.revertedWithCustomError(chainBuy, "InactiveParty");
 
       await chainBuy.connect(admin).setMerchant(MERCHANT_ID, cardIssuer.address, false);
@@ -47,7 +57,7 @@ describe("01. 공구 생성 · 참여 · 마감 · 미달 환불", () => {
     });
 
     it("잘못된 조건은 거부한다", async () => {
-      const { chainBuy, creator, params } = await loadFixture(deployFixture);
+      const { chainBuy, seller, params } = await loadFixture(deployFixture);
       const base = await params();
       const bad = [
         { ...base, maxPrice: 0n },
@@ -57,7 +67,7 @@ describe("01. 공구 생성 · 참여 · 마감 · 미달 환불", () => {
         { ...base, deadline: BigInt(await time.latest()) },
       ];
       for (const p of bad) {
-        await expect(chainBuy.connect(creator).createListedGroup(SELLER_ID, p)).to.be.revertedWithCustomError(
+        await expect(chainBuy.connect(seller).createListedGroup(SELLER_ID, p)).to.be.revertedWithCustomError(
           chainBuy,
           "InvalidParams"
         );

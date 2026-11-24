@@ -15,7 +15,7 @@ async function main() {
     fs.readFileSync(path.join(__dirname, "..", "..", "frontend", "src", "lib", "catalog.json"), "utf8")
   );
   const signers = await ethers.getSigners();
-  const [, , agent, , , , creator] = signers;
+  const [, , agent, , seller] = signers;
   const buyers = signers.slice(8, 20);
   const reviewer = signers[1];
 
@@ -53,7 +53,7 @@ async function main() {
     const p = catalog.products[i];
     const c = plan[i];
     await (
-      await cb.connect(creator).createListedGroup(ethers.id(p.seller), {
+      await cb.connect(seller).createListedGroup(ethers.id(p.seller), {
         productHash: ethers.id(p.id),
         maxPrice: won(p.price),
         targetQty: c.target,
