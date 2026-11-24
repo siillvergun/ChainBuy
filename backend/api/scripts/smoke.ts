@@ -224,6 +224,25 @@ async function main() {
   r = await api("/sellers/me", { token: proposer.token, method: "PATCH", body: { name: "가짜 상점", contact: "fake@example.com" } });
   check("판매자가 아니면 판매자 정보 수정 불가", r.status === 404);
 
+  // ── 찜 ──
+  r = await api("/likes", { token: proposer.token });
+  check("찜 목록 처음엔 비어 있음", r.status === 200 && r.data.length === 0);
+  r = await api("/likes/3", { token: proposer.token, body: {} });
+  check("찜하기", r.status === 201 && r.data.liked);
+  await api("/likes/3", { token: proposer.token, body: {} });
+  r = await api("/likes", { token: proposer.token });
+  check("같은 공구를 두 번 찜해도 하나", r.data.length === 1 && r.data[0] === 3);
+  await api("/likes/3", { token: inf.token, body: {} });
+  r = await api("/likes/counts");
+  check("공구별 찜 수", r.data["3"] === 2);
+  r = await api("/likes/99999", { token: proposer.token, body: {} });
+  check("없는 공구는 찜 불가", r.status === 404);
+  r = await api("/likes/3", { body: {} });
+  check("로그인 없이 찜 불가", r.status === 401);
+  r = await api("/likes/3", { token: proposer.token, method: "DELETE" });
+  r = await api("/likes", { token: proposer.token });
+  check("찜 해제", r.data.length === 0);
+
   console.log(failures ? `\n${failures}개 실패` : "\n모두 통과");
   process.exit(failures ? 1 : 0);
 }
