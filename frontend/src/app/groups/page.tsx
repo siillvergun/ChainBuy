@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGroups } from "@/lib/hooks";
 import { isClosingToday } from "@/lib/groups";
+import { CATEGORIES } from "@/lib/categories";
 import { GroupCard } from "@/components/GroupCard";
 import { ChainNotice, Empty, GridSkeleton } from "@/components/States";
 
-const CATS = ["전체", "디지털", "식품", "캠핑", "생활", "육아", "주방"];
+const CATS = ["전체", ...CATEGORIES.map((c) => c.name)];
 const KINDS = [
   { v: "", label: "전체" },
   { v: "listed", label: "판매자 특가" },

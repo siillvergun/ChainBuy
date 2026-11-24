@@ -39,6 +39,14 @@ async function main() {
     { target: 12, fill: 3, hours: 30 },
     { target: 40, fill: 31, hours: 60 },
     { target: 10, fill: 10, hours: 40 }, // 목표 달성 → 결제·배송까지 진행
+    { target: 20, fill: 9, hours: 80 },
+    { target: 30, fill: 22, hours: 15 },
+    { target: 15, fill: 12, hours: 45 },
+    { target: 20, fill: 5, hours: 100 },
+    { target: 12, fill: 10, hours: 22 },
+    { target: 25, fill: 14, hours: 65 },
+    { target: 20, fill: 16, hours: 35 },
+    { target: 30, fill: 7, hours: 120 },
   ];
 
   for (let i = 0; i < catalog.products.length && i < plan.length; i++) {

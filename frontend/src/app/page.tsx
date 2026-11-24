@@ -7,8 +7,7 @@ import { isClosingToday } from "@/lib/groups";
 import { GroupCard } from "@/components/GroupCard";
 import { Banner } from "@/components/Banner";
 import { ChainNotice, Empty, GridSkeleton } from "@/components/States";
-
-const CATEGORIES = ["디지털", "식품", "캠핑", "생활", "육아", "주방"];
+import { CategoryRail } from "@/components/CategoryRail";
 
 export default function Home() {
   const { groups, isLoading, error } = useGroups();
@@ -21,17 +20,7 @@ export default function Home() {
     <div className="mx-auto flex max-w-page flex-col gap-14 px-4 py-6 md:px-6">
       <Banner />
 
-      <nav aria-label="카테고리" className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-        {CATEGORIES.map((c) => (
-          <Link
-            key={c}
-            href={`/groups?cat=${encodeURIComponent(c)}`}
-            className="flex h-14 items-center justify-center rounded-lg border border-line text-sm font-bold hover:border-ink"
-          >
-            {c}
-          </Link>
-        ))}
-      </nav>
+      <CategoryRail />
 
       <ChainNotice error={error} />
 
