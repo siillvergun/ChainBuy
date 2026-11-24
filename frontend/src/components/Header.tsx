@@ -33,6 +33,9 @@ export function Header() {
             <Link href="/seller" className="hover:text-ink">
               판매자센터
             </Link>
+            <Link href="/influencer" className="hover:text-ink">
+              인플루언서
+            </Link>
             {session?.isReviewer && (
               <Link href="/admin" className="font-bold text-ink hover:text-accent">
                 담당자

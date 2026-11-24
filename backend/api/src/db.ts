@@ -65,6 +65,41 @@ CREATE TABLE IF NOT EXISTS proposals (
 );
 `);
 
+// 인플루언서 프로필과 OAuth로 확인한 SNS 계정, 공구 협찬 태그
+db.exec(`
+CREATE TABLE IF NOT EXISTS influencers (
+  address TEXT PRIMARY KEY,
+  handle TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  bio TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS influencer_accounts (
+  platform TEXT NOT NULL,
+  platform_user_id TEXT NOT NULL,
+  address TEXT NOT NULL,
+  username TEXT NOT NULL,
+  url TEXT NOT NULL,
+  verified_at INTEGER NOT NULL,
+  PRIMARY KEY (platform, platform_user_id)       -- SNS 계정 하나는 인플루언서 한 명에게만
+);
+CREATE TABLE IF NOT EXISTS oauth_states (
+  state TEXT PRIMARY KEY,
+  address TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  verifier TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS group_tags (
+  group_id INTEGER NOT NULL,
+  influencer TEXT NOT NULL,                       -- 인플루언서 지갑 주소
+  seller TEXT NOT NULL,                           -- 태그한 판매자 지갑
+  status TEXT NOT NULL DEFAULT 'pending',         -- pending | accepted | rejected | removed
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (group_id, influencer)
+);
+`);
+
 /** 데모 상품(catalog.json)을 처음 한 번 넣는다. 로컬 시드 공구가 이 상품들을 가리킨다. */
 export function seedCatalog() {
   if (!fs.existsSync(CATALOG_PATH)) return;

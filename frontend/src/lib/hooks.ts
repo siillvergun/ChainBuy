@@ -6,7 +6,7 @@ import { chainBuyAbi } from "./contracts.generated";
 import { CHAINBUY_ADDRESS } from "./config";
 import { useQuery } from "@tanstack/react-query";
 import { OnchainGroup, toView, GroupView, Product, fallbackProducts } from "./groups";
-import { api, ApiProduct } from "./api";
+import { api, ApiProduct, SponsorTag } from "./api";
 
 const cb = { address: CHAINBUY_ADDRESS, abi: chainBuyAbi } as const;
 
@@ -82,4 +82,14 @@ export function useMyParticipation(id: bigint) {
     fee: fee?.status === "success" ? (fee.result as bigint) : 0n,
     refetch: res.refetch,
   };
+}
+
+/** 공개된 협찬 태그 (공구 id → 인플루언서 목록) */
+export function useSponsorTags() {
+  const q = useQuery({ queryKey: ["tags"], queryFn: () => api<SponsorTag[]>("/tags"), refetchInterval: 30_000, retry: 1 });
+  return useMemo(() => {
+    const m = new Map<number, SponsorTag[]>();
+    for (const t of q.data ?? []) m.set(t.groupId, [...(m.get(t.groupId) ?? []), t]);
+    return m;
+  }, [q.data]);
 }

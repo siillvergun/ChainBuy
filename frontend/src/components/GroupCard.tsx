@@ -1,11 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { GroupView, discountRate, remaining, won, STATUS_LABEL } from "@/lib/groups";
 import { ProductThumb } from "./ProductThumb";
+import { SponsorBadge } from "./SponsorBadge";
+import { useSponsorTags } from "@/lib/hooks";
 
 export function GroupCard({ g, rank }: { g: GroupView; rank?: number }) {
   const rate = discountRate(g.product, g.maxPrice);
   const pct = Math.min(100, Math.round((g.totalQty / g.targetQty) * 100));
   const open = g.statusName === "OPEN";
+  const tags = useSponsorTags().get(Number(g.id));
 
   return (
     <Link href={`/groups/${g.id}`} className="group block">
@@ -24,6 +29,7 @@ export function GroupCard({ g, rank }: { g: GroupView; rank?: number }) {
       </div>
       <div className="mt-3 flex flex-col gap-1">
         <span className="text-xs font-bold text-muted">{g.isListed ? "판매자 특가" : "추천 공구 · 이용료 5%"}</span>
+        <SponsorBadge tags={tags} link={false} />
         <strong className="line-clamp-2 text-[15px] font-medium leading-snug text-ink">
           {g.product?.name ?? `공구 #${g.id}`}
         </strong>

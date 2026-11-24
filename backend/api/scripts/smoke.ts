@@ -15,7 +15,20 @@ const KEYS = {
   reviewer: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", // #1 (REVIEWER)
   newSeller: "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e", // #6
   proposer: "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356", // #7
+  influencer: "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6", // #8
+  impostor: "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97", // #9
 } as const;
+
+/** mock OAuth로 SNS 계정을 연결한다. 리다이렉트 Location을 돌려준다 */
+async function linkMock(token: string, username: string) {
+  const start = await api("/oauth/mock/start", { token, body: {} });
+  if (start.status !== 200) return { location: `start ${start.status} ${start.data?.error}`, state: "" };
+  const state = new URL(start.data.url).searchParams.get("state")!;
+  const res = await fetch(`${API}/oauth/mock/callback?state=${state}&code=${username}`, { redirect: "manual" });
+  // 리다이렉트 주소의 쿼리(공백은 +로 인코딩됨)를 제대로 풀어서 비교한다
+  const loc = new URL(res.headers.get("location") ?? "http://x/");
+  return { location: `${loc.pathname}?linked=${loc.searchParams.get("linked") ?? ""}&error=${loc.searchParams.get("error") ?? ""}`, state };
+}
 
 const cb = { address: deployment.chainBuy!, abi: chainBuyAbi } as const;
 let failures = 0;
@@ -139,6 +152,56 @@ async function main() {
   r = await api("/products");
   const hashes = new Set((r.data as { productHash: string }[]).map((p) => p.productHash));
   check("상품 목록에 새 상품 포함", hashes.has(product.productHash) && hashes.has(prop.productHash));
+
+  // ── 인플루언서 인증·협찬 태그 플로우 ──
+  const inf = await login(KEYS.influencer);
+  const impostor = await login(KEYS.impostor);
+
+  r = await api("/oauth/mock/start", { token: inf.token, body: {} });
+  check("프로필 없이 SNS 연결 불가", r.status === 409);
+
+  r = await api("/influencers", { token: inf.token, body: { handle: "Coffee_Lover", name: "커피러버", bio: "매일 커피 리뷰" } });
+  check("인플루언서 프로필 생성 (핸들 소문자화)", r.status === 200 && r.data.handle === "coffee_lover" && !r.data.verified);
+
+  r = await api("/influencers", { token: impostor.token, body: { handle: "coffee_lover", name: "가짜" } });
+  check("이미 쓰는 핸들은 가져갈 수 없음", r.status === 409);
+
+  r = await api(`/groups/${listedId}/tags`, { token: seller.token, body: { handle: "@coffee_lover" } });
+  check("SNS 인증 전에는 태그 불가", r.status === 409);
+
+  r = await api("/providers".replace("/", "/oauth/"));
+  check("OAuth 제공자 목록에 4개 플랫폼 + 테스트", r.status === 200 && ["youtube", "instagram", "threads", "tiktok"].every((p) => r.data.some((x: { platform: string }) => x.platform === p)));
+
+  const linked = await linkMock(inf.token, "coffee_lover");
+  check("SNS 계정 연결 (mock OAuth)", linked.location.includes("linked=mock&error="), linked.location);
+  const replay = await fetch(`${API}/oauth/mock/callback?state=${linked.state}&code=coffee_lover`, { redirect: "manual" });
+  check("같은 인증 요청(state) 재사용 불가", decodeURIComponent(replay.headers.get("location") ?? "").includes("error="));
+
+  await api("/influencers", { token: impostor.token, body: { handle: "fake_coffee", name: "가짜" } });
+  const stolen = await linkMock(impostor.token, "coffee_lover");
+  check("다른 사람이 연결한 SNS 계정은 가져갈 수 없음", stolen.location.includes("이미 다른"), stolen.location);
+
+  r = await api(`/groups/${listedId}/tags`, { token: proposer.token, body: { handle: "coffee_lover" } });
+  check("판매자가 아니면 태그 불가", r.status === 403);
+  r = await api(`/groups/${extId}/tags`, { token: seller.token, body: { handle: "coffee_lover" } });
+  check("남의 공구에는 태그 불가", r.status === 403);
+
+  r = await api(`/groups/${listedId}/tags`, { token: seller.token, body: { handle: "@coffee_lover" } });
+  check("판매자가 자기 공구에 태그 → 수락 대기", r.status === 201 && r.data.status === "pending");
+
+  r = await api("/tags");
+  check("수락 전에는 공개되지 않음", !r.data.some((t: { groupId: number }) => t.groupId === Number(listedId)));
+
+  r = await api(`/tags/${listedId}/respond`, { token: inf.token, body: { action: "accept" } });
+  check("인플루언서가 태그 수락", r.status === 200 && r.data.status === "accepted");
+  r = await api("/tags");
+  check("수락 후 협찬 태그 공개", r.data.some((t: { groupId: number; handle: string }) => t.groupId === Number(listedId) && t.handle === "coffee_lover"));
+  r = await api("/influencers/coffee_lover");
+  check("인플루언서 페이지에 공구 표시", r.status === 200 && r.data.verified && r.data.groupIds.includes(Number(listedId)));
+
+  r = await api(`/tags/${listedId}/respond`, { token: inf.token, body: { action: "remove" } });
+  r = await api("/tags");
+  check("인플루언서가 태그를 내리면 비공개", !r.data.some((t: { groupId: number }) => t.groupId === Number(listedId)));
 
   console.log(failures ? `\n${failures}개 실패` : "\n모두 통과");
   process.exit(failures ? 1 : 0);
