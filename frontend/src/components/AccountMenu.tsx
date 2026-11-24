@@ -70,24 +70,23 @@ export function UtilityLinks() {
   );
 }
 
-/** 검색창 옆 아이콘 버튼: 공구 열기 · 마이 · 참여 공구(진행 중 개수 배지) */
+/** 검색창 옆 아이콘 버튼: 공구 열기 · 마이 · 장바구니(참여 중인 공구 개수 배지) */
 export function IconButtons() {
   const mounted = useMounted();
-  const pathname = usePathname();
   const { session } = useAuth();
   const mine = useMyGroups(session?.address as `0x${string}` | undefined);
   const ongoing = mounted && session ? mine.filter((g) => ONGOING.has(g.statusName)).length : 0;
-  const loginFirst = (to: string) => (mounted && session ? to : `/login?next=${encodeURIComponent(to === "/my" ? "/my" : pathname)}`);
+  const loginFirst = (to: string) => (mounted && session ? to : `/login?next=${encodeURIComponent(to)}`);
 
   return (
     <nav aria-label="바로가기" className="ml-auto flex items-center gap-1 sm:gap-3">
       <IconLink href="/create" label="공구 열기" icon={<path d="M12 5v14M5 12h14" />} />
       <IconLink href={loginFirst("/my")} label="마이" icon={<><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" /></>} />
       <IconLink
-        href={loginFirst("/my")}
-        label="참여 공구"
+        href={loginFirst("/cart")}
+        label="장바구니"
         badge={ongoing}
-        icon={<><path d="M5 8h14l-1.2 12H6.2z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>}
+        icon={<><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /><path d="M2.5 3.5h2.8l2.4 11.5h11.1l2-8H6.4" /></>}
       />
     </nav>
   );
@@ -102,7 +101,7 @@ function IconLink({ href, label, icon, badge = 0 }: { href: string; label: strin
       <span className="whitespace-nowrap">{label}</span>
       {badge > 0 && (
         <span
-          aria-label={`진행 중 ${badge}건`}
+          aria-label={`참여 중 ${badge}건`}
           className="absolute right-1.5 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-white sm:right-2.5"
         >
           {badge > 99 ? "99+" : badge}
