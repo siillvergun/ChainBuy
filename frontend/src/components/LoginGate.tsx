@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { useAuth } from "./AuthProvider";
+import { NetworkCheck } from "./NetworkCheck";
 
 /** 지갑 연결 + 서명 로그인이 필요한 화면을 감싼다 */
 export function LoginGate({ children, what = "이 기능" }: { children: React.ReactNode; what?: string }) {
@@ -13,7 +14,13 @@ export function LoginGate({ children, what = "이 기능" }: { children: React.R
   useEffect(() => setMounted(true), []);
 
   if (!mounted) return null;
-  if (session) return <>{children}</>;
+  if (session)
+    return (
+      <>
+        <NetworkCheck />
+        {children}
+      </>
+    );
 
   return (
     <div className="flex flex-col items-start gap-3 rounded-xl border border-line bg-paper p-6">
