@@ -203,6 +203,27 @@ async function main() {
   r = await api("/tags");
   check("인플루언서가 태그를 내리면 비공개", !r.data.some((t: { groupId: number }) => t.groupId === Number(listedId)));
 
+  // ── 사용자 프로필·배송지 ──
+  r = await api("/users/me", { token: proposer.token });
+  check("프로필 처음엔 배송지 없음", r.status === 200 && r.data.shipping === null && r.data.recipientHash === null);
+  const ship = { name: "홍길동", phone: "010-1234-5678", zip: "06236", address1: "서울특별시 강남구 테헤란로 123", address2: "4층" };
+  r = await api("/users/me", { token: proposer.token, method: "PUT", body: { nickname: "길동", shipping: { ...ship, zip: "123" } } });
+  check("잘못된 우편번호 거부", r.status === 400);
+  r = await api("/users/me", { token: proposer.token, method: "PUT", body: { nickname: "길동", contact: "gildong@example.com", shipping: ship } });
+  const h1 = r.data.recipientHash as string;
+  check("배송지 저장 → 배송지 해시 발급", r.status === 200 && /^0x[0-9a-f]{64}$/.test(h1) && r.data.nickname === "길동");
+  r = await api("/users/me", { token: proposer.token, method: "PUT", body: { nickname: "길동", shipping: ship } });
+  check("같은 배송지면 같은 해시 (솔트 유지)", r.data.recipientHash === h1);
+  r = await api("/users/me", { token: proposer.token, method: "PUT", body: { nickname: "길동", shipping: { ...ship, address2: "5층" } } });
+  check("배송지가 바뀌면 해시도 바뀜", r.data.recipientHash !== h1);
+  r = await api("/users/me", { token: inf.token, method: "PUT", body: { shipping: ship } });
+  check("다른 사람이 같은 주소를 써도 해시가 다름 (솔트)", r.data.recipientHash !== h1);
+
+  r = await api("/sellers/me", { token: seller.token, method: "PATCH", body: { name: "오늘의 커피 로스터리", contact: "coffee@example.com" } });
+  check("판매자 상호·연락처 수정", r.status === 200 && r.data.name === "오늘의 커피 로스터리");
+  r = await api("/sellers/me", { token: proposer.token, method: "PATCH", body: { name: "가짜 상점", contact: "fake@example.com" } });
+  check("판매자가 아니면 판매자 정보 수정 불가", r.status === 404);
+
   console.log(failures ? `\n${failures}개 실패` : "\n모두 통과");
   process.exit(failures ? 1 : 0);
 }
