@@ -1,7 +1,12 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAccount, useConnect } from "wagmi";
+import { useAuth } from "@/components/AuthProvider";
+import { Notice } from "@/components/Field";
+import { shortAddr } from "@/lib/groups";
 
 export default function LoginPage() {
   return (
@@ -11,80 +16,71 @@ export default function LoginPage() {
   );
 }
 
-/** 로그인·회원가입 화면. 계정 기능은 백엔드(api) 단계에서 연결한다. 지금은 지갑 연결만으로 참여할 수 있다. */
+/** 안전한 내부 경로만 돌아갈 곳으로 허용 (외부 주소로 튀는 것 방지) */
+function safeNext(raw: string | null) {
+  return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/my";
+}
+
+/**
+ * 지갑 로그인: 지갑 연결 → 문구에 서명 → 원래 보던 페이지로 돌아간다.
+ * 서명은 거래가 아니라 수수료가 들지 않는다. 지갑 주소가 곧 계정이라 따로 가입할 필요가 없다.
+ */
 function Login() {
-  const sp = useSearchParams();
-  const [tab, setTab] = useState<"login" | "signup">(sp.get("tab") === "signup" ? "signup" : "login");
-  const login = tab === "login";
-  const verb = login ? "로그인" : "시작하기";
+  const router = useRouter();
+  const next = safeNext(useSearchParams().get("next"));
+  const { address, isConnected } = useAccount();
+  const { connect, connectors, isPending } = useConnect();
+  const { session, login, loggingIn, error } = useAuth();
+
+  useEffect(() => {
+    if (session) router.replace(next);
+  }, [session, next, router]);
 
   return (
     <div className="mx-auto flex max-w-[440px] flex-col gap-6 px-4 py-14">
-      <div role="tablist" className="grid grid-cols-2 border-b border-line">
-        {(["login", "signup"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`-mb-px h-[52px] border-b-2 text-base ${tab === t ? "border-ink font-bold text-ink" : "border-transparent text-muted"}`}
-          >
-            {t === "login" ? "로그인" : "회원가입"}
-          </button>
-        ))}
+      <div>
+        <h1 className="text-[28px] font-extrabold tracking-tight">로그인</h1>
+        <p className="mt-2 text-[15px] leading-6 text-muted">지갑이 곧 계정이에요. 따로 가입하지 않아도 되고, 처음 로그인하면 마이페이지에서 닉네임과 배송지를 등록할 수 있어요.</p>
       </div>
 
-      <div className="flex flex-col gap-2.5">
-        <button type="button" disabled className="h-[52px] rounded-md bg-[#FEE500] text-[15px] font-bold text-[#191600] disabled:opacity-60">
-          카카오로 {verb}
-        </button>
-        <button type="button" disabled className="h-[52px] rounded-md bg-[#03A94D] text-[15px] font-bold text-white disabled:opacity-60">
-          네이버로 {verb}
-        </button>
-      </div>
+      <ol className="flex flex-col gap-3">
+        <Step n={1} done={isConnected} title="지갑 연결" desc={isConnected ? `${shortAddr(address)} 연결됨` : "MetaMask 같은 브라우저 지갑을 연결해요"}>
+          {!isConnected && (
+            <button type="button" className="btn-dark" disabled={isPending || !connectors[0]} onClick={() => connect({ connector: connectors[0] })}>
+              {isPending ? "연결 중…" : "지갑 연결"}
+            </button>
+          )}
+        </Step>
+        <Step n={2} done={!!session} title="서명으로 로그인" desc="문구에 한 번 서명해요. 거래가 아니라 수수료가 들지 않아요">
+          {isConnected && !session && (
+            <button type="button" className="btn-primary" disabled={loggingIn} onClick={() => void login()}>
+              {loggingIn ? "서명 기다리는 중…" : "서명하고 로그인"}
+            </button>
+          )}
+        </Step>
+      </ol>
 
-      <div className="flex items-center gap-3 text-[13px] text-muted">
-        <span className="h-px flex-1 bg-line" />
-        또는 이메일로
-        <span className="h-px flex-1 bg-line" />
-      </div>
+      {error && <Notice tone="error">{error}</Notice>}
+      {!connectors[0] && <Notice tone="error">브라우저 지갑을 찾지 못했어요. MetaMask를 설치한 뒤 새로고침해 주세요.</Notice>}
 
-      <form className="flex flex-col gap-3" onSubmit={(e) => e.preventDefault()}>
-        <label className="flex flex-col gap-1.5">
-          <span className="label">이메일</span>
-          <input className="input" type="email" autoComplete="email" placeholder="you@example.com" />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="label">비밀번호</span>
-          <input className="input" type="password" autoComplete={login ? "current-password" : "new-password"} placeholder={login ? "" : "8자 이상, 영문·숫자 포함"} />
-        </label>
-        {!login && (
-          <>
-            <label className="flex flex-col gap-1.5">
-              <span className="label">닉네임</span>
-              <input className="input" type="text" autoComplete="nickname" placeholder="공구 추천에 표시돼요" />
-            </label>
-            <fieldset className="mt-1 flex flex-col rounded-md border border-line px-4 py-3">
-              <legend className="px-1 text-sm font-bold">약관 동의</legend>
-              {["전체 동의", "[필수] 이용약관", "[필수] 개인정보 수집·이용", "[선택] 마감 임박·특가 알림 받기"].map((t, i) => (
-                <label key={t} className={`flex min-h-10 items-center gap-2 text-sm ${i === 0 ? "font-bold" : "text-[#4A4A4A]"}`}>
-                  <input type="checkbox" className="h-[18px] w-[18px]" />
-                  {t}
-                </label>
-              ))}
-            </fieldset>
-          </>
-        )}
-        <button type="submit" disabled className={`${login ? "btn-dark" : "btn-primary"} h-[52px] text-base`}>
-          {login ? "로그인" : "가입하기"}
-        </button>
-      </form>
-
-      <div className="rounded-lg bg-paper p-4 text-[13px] leading-6 text-[#4A4A4A]">
-        계정 기능은 준비 중이에요. 지금은 상단의 <strong className="text-ink">지갑 연결</strong>만으로 공구에 참여할 수 있고, 참여금은 지갑에서 컨트랙트로
-        바로 예치돼요.
-      </div>
+      <p className="text-center text-sm text-muted">
+        로그인 없이도 <Link href="/groups" className="font-bold text-ink underline">공구 둘러보기</Link>는 할 수 있어요.
+      </p>
     </div>
+  );
+}
+
+function Step({ n, done, title, desc, children }: { n: number; done: boolean; title: string; desc: string; children?: React.ReactNode }) {
+  return (
+    <li className={`flex flex-wrap items-center gap-4 rounded-xl border p-4 ${done ? "border-safe bg-safe-tint" : "border-line"}`}>
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${done ? "bg-safe text-white" : "bg-line text-muted"}`}>
+        {done ? "✓" : n}
+      </span>
+      <div className="min-w-[160px] flex-1">
+        <strong className="block">{title}</strong>
+        <span className="text-sm text-muted">{desc}</span>
+      </div>
+      {children}
+    </li>
   );
 }

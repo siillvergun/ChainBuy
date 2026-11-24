@@ -6,7 +6,7 @@ import { chainBuyAbi } from "./contracts.generated";
 import { CHAINBUY_ADDRESS } from "./config";
 import { useQuery } from "@tanstack/react-query";
 import { OnchainGroup, toView, GroupView, Product, fallbackProducts } from "./groups";
-import { api, ApiProduct, SponsorTag } from "./api";
+import { api, ApiProduct, SponsorTag, UserProfile } from "./api";
 
 const cb = { address: CHAINBUY_ADDRESS, abi: chainBuyAbi } as const;
 
@@ -92,4 +92,14 @@ export function useSponsorTags() {
     for (const t of q.data ?? []) m.set(t.groupId, [...(m.get(t.groupId) ?? []), t]);
     return m;
   }, [q.data]);
+}
+
+/** 로그인한 사용자의 프로필·배송지 */
+export function useMe(token: string | undefined) {
+  return useQuery({
+    queryKey: ["me", token],
+    queryFn: () => api<UserProfile>("/users/me", { token }),
+    enabled: !!token,
+    refetchInterval: false,
+  });
 }

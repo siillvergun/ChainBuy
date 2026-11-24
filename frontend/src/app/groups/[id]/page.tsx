@@ -4,7 +4,8 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { keccak256, toBytes } from "viem";
 import { useAccount, useReadContracts } from "wagmi";
-import { useGroup, useMyParticipation, useSponsorTags } from "@/lib/hooks";
+import { useGroup, useMe, useMyParticipation, useSponsorTags } from "@/lib/hooks";
+import { useAuth } from "@/components/AuthProvider";
 import { SponsorBadge } from "@/components/SponsorBadge";
 import { useTx } from "@/lib/useTx";
 import { chainBuyAbi, mockUsdcAbi } from "@/lib/contracts.generated";
@@ -225,6 +226,10 @@ function Timeline({ g }: { g: GroupView }) {
 
 function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
   const { address, isConnected } = useAccount();
+  const { session } = useAuth();
+  const me = useMe(session?.token);
+  const recipientHash = me.data?.recipientHash ?? null;
+  const here = `/groups/${g.id}`;
   const { participant, refundable, fee, refetch: refetchMe } = useMyParticipation(g.id);
   const tx = useTx();
   const [qty, setQty] = useState(1);
@@ -261,8 +266,11 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
 
   if (!isConnected) {
     return (
-      <div className="rounded-lg bg-paper p-4 text-sm text-[#4A4A4A]">
-        참여하려면 상단의 <strong className="text-ink">지갑 연결</strong>을 눌러 주세요. 참여금은 지갑에서 컨트랙트로 바로 예치돼요.
+      <div className="flex flex-col gap-3 rounded-lg bg-paper p-4 text-sm text-[#4A4A4A]">
+        <span>참여하려면 지갑으로 로그인해 주세요. 참여금은 지갑에서 컨트랙트로 바로 예치돼요.</span>
+        <Link href={`/login?next=${encodeURIComponent(here)}`} className="btn-primary h-12 text-base">
+          로그인하고 참여하기
+        </Link>
       </div>
     );
   }
@@ -296,7 +304,18 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
             <strong className="text-xl">{won(total)}</strong>
           </div>
 
-          {balance < total ? (
+          {!session ? (
+            <Link href={`/login?next=${encodeURIComponent(here)}`} className="btn-primary h-[52px] text-base">
+              로그인하고 참여하기
+            </Link>
+          ) : !recipientHash ? (
+            <div className="flex flex-col gap-2 rounded-lg border border-accent-line bg-accent-tint p-4 text-sm text-accent-dark">
+              <span>참여하려면 배송지를 먼저 등록해야 해요. 체인에는 배송지 원문이 아니라 해시만 기록돼요.</span>
+              <Link href={`/my/profile?next=${encodeURIComponent(here)}`} className="btn-primary h-11">
+                배송지 등록하기
+              </Link>
+            </div>
+          ) : balance < total ? (
             <button
               type="button"
               className="btn-dark h-[52px] text-base"
@@ -319,14 +338,21 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
                   if (allowance < total) {
                     await tx.send("토큰 사용 승인 중", { address: USDC_ADDRESS!, abi: mockUsdcAbi, functionName: "approve", args: [CHAINBUY_ADDRESS!, total] });
                   }
-                  // 배송지 원문은 백엔드에 저장하고, 체인에는 해시만 남긴다 (DEP-04). 백엔드 연동 전에는 주소 기반 임시 해시.
-                  const recipientHash = keccak256(toBytes(`recipient:${address}`));
-                  await tx.send("참여금 예치 중", { ...cb, functionName: "deposit", args: [g.id, qty, recipientHash] });
+                  // 배송지 원문은 서버에만 두고, 체인에는 솔트를 섞은 배송지 해시만 남긴다 (DEP-04)
+                  await tx.send("참여금 예치 중", { ...cb, functionName: "deposit", args: [g.id, qty, recipientHash!] });
                 })
               }
             >
               {tx.pending ?? `${won(total)} 예치하고 참여하기`}
             </button>
+          )}
+          {session && me.data?.shipping && (
+            <p className="text-xs text-muted">
+              배송지: {me.data.shipping.name} · {me.data.shipping.address1} {me.data.shipping.address2}{" "}
+              <Link href={`/my/profile?next=${encodeURIComponent(here)}`} className="font-bold underline">
+                변경
+              </Link>
+            </p>
           )}
         </>
       )}
