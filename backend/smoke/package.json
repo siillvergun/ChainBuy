@@ -1,0 +1,12 @@
+{
+  "name": "chainbuy-smoke",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "smoke": "tsx smoke.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.19.2",
+    "viem": "^2.22.8"
+  }
+}
