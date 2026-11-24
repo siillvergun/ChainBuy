@@ -7,7 +7,8 @@
     "test": "hardhat test",
     "coverage": "hardhat coverage",
     "node": "hardhat node",
-    "deploy:local": "hardhat run scripts/deploy.ts --network localhost"
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "seed:local": "hardhat run scripts/seed.ts --network localhost"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.1.0"
