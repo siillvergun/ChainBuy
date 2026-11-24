@@ -8,7 +8,7 @@ import { useGroup, useMyParticipation } from "@/lib/hooks";
 import { useTx } from "@/lib/useTx";
 import { chainBuyAbi, mockUsdcAbi } from "@/lib/contracts.generated";
 import { CHAINBUY_ADDRESS, USDC_ADDRESS, activeChain } from "@/lib/config";
-import { GroupView, STATUS_LABEL, discountRate, remaining, shortAddr, toToken, unitDeposit, won } from "@/lib/groups";
+import { GroupView, STATUS_LABEL, discountRate, remaining, toToken, unitDeposit, won } from "@/lib/groups";
 import { ProductThumb } from "@/components/ProductThumb";
 import { ChainNotice } from "@/components/States";
 
@@ -80,35 +80,33 @@ function Detail({ g, refetch }: { g: GroupView; refetch: () => void }) {
         </div>
       </div>
 
-      <div className="mt-14 grid gap-10 md:grid-cols-2">
-        <section>
-          <h2 className="section-title mb-4">고정된 조건</h2>
-          <p className="mb-4 text-sm text-muted">공구를 만들 때 체인에 기록돼서 누구도 바꿀 수 없어요.</p>
-          <dl className="grid grid-cols-[120px_1fr] gap-y-3 border-t border-line pt-4 text-sm">
-            <dt className="text-muted">옵션</dt>
-            <dd>{g.product?.option ?? "-"}</dd>
-            <dt className="text-muted">최대 가격</dt>
-            <dd>{won(g.maxPrice)} / 개</dd>
-            <dt className="text-muted">목표 수량</dt>
-            <dd>
+      <div className="mt-16 grid gap-8 lg:grid-cols-[3fr_2fr]">
+        <section className="rounded-2xl border border-line p-6 md:p-8">
+          <h2 className="section-title">고정된 조건</h2>
+          <p className="mt-2 text-[15px] text-muted">공구를 만들 때 체인에 기록돼서 누구도 바꿀 수 없어요.</p>
+          <dl className="mt-6 grid grid-cols-1 gap-x-6 border-t border-line pt-2 text-[15px] sm:grid-cols-[140px_1fr] md:text-base">
+            <Row label="옵션">{g.product?.option ?? "-"}</Row>
+            <Row label="최대 가격">
+              <strong>{won(g.maxPrice)}</strong> / 개
+            </Row>
+            <Row label="목표 수량">
               {g.targetQty}개 · 1인 최대 {g.maxPerUser}개
-            </dd>
-            <dt className="text-muted">마감</dt>
-            <dd>{new Date(Number(g.deadline) * 1000).toLocaleString("ko-KR")}</dd>
-            <dt className="text-muted">플랫폼 수수료</dt>
-            <dd>
+            </Row>
+            <Row label="마감">{new Date(Number(g.deadline) * 1000).toLocaleString("ko-KR")}</Row>
+            <Row label="플랫폼 수수료">
               {g.feeBps / 100}% · {g.isListed ? "판매자 부담" : "구매자 부담(예치금에 포함)"}
-            </dd>
-            <dt className="text-muted">결제 대상</dt>
-            <dd className="font-mono text-xs leading-5">
-              {shortAddr(g.payee)} · {g.isListed ? "등록된 판매자 지갑" : "허용 쇼핑몰 전용 카드"}
-            </dd>
-            <dt className="text-muted">상품 해시</dt>
-            <dd className="truncate font-mono text-xs leading-5">{g.productHash}</dd>
+            </Row>
+            <Row label="결제 대상">
+              <span className="block">{g.isListed ? "등록된 판매자 지갑" : "허용 쇼핑몰 전용 카드"}</span>
+              <Hex value={g.payee} />
+            </Row>
+            <Row label="상품 해시">
+              <Hex value={g.productHash} />
+            </Row>
           </dl>
           {activeChain.blockExplorers?.default && (
             <a
-              className="mt-4 inline-block text-sm font-bold text-accent"
+              className="mt-6 inline-block text-[15px] font-bold text-accent"
               href={`${activeChain.blockExplorers.default.url}/address/${CHAINBUY_ADDRESS}`}
               target="_blank"
               rel="noreferrer"
@@ -120,6 +118,40 @@ function Detail({ g, refetch }: { g: GroupView; refetch: () => void }) {
         <Timeline g={g} />
       </div>
     </div>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <>
+      <dt className="pt-4 text-muted sm:border-b sm:border-line sm:pb-4">{label}</dt>
+      <dd className="min-w-0 border-b border-line pb-4 pt-1 sm:pt-4">{children}</dd>
+    </>
+  );
+}
+
+/** 주소·해시는 자르지 않고 전부 보여 주고, 복사 버튼을 단다 */
+function Hex({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <span className="mt-1 flex items-start gap-2">
+      <code className="min-w-0 flex-1 break-all rounded-md bg-paper px-2.5 py-1.5 font-mono text-[13px] leading-5 text-ink">{value}</code>
+      <button
+        type="button"
+        className="shrink-0 rounded-md border border-line px-2.5 py-1.5 text-[13px] font-bold hover:border-ink"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          } catch {
+            /* 클립보드 권한이 없으면 무시 */
+          }
+        }}
+      >
+        {copied ? "복사됨" : "복사"}
+      </button>
+    </span>
   );
 }
 
@@ -137,10 +169,10 @@ function Timeline({ g }: { g: GroupView }) {
   const failed = g.statusName === "FAILED" || g.statusName === "CANCELLED";
   const at = order.indexOf(g.statusName);
   return (
-    <section>
-      <h2 className="section-title mb-4">진행 과정</h2>
+    <section className="rounded-2xl border border-line p-6 md:p-8">
+      <h2 className="section-title mb-6">진행 과정</h2>
       {failed && (
-        <p className="mb-4 rounded-lg bg-accent-tint p-3 text-sm font-bold text-accent-dark">
+        <p className="mb-4 rounded-lg bg-accent-tint p-3 text-[15px] font-bold text-accent-dark">
           {STATUS_LABEL[g.statusName]} — 참여자는 예치금 전액을 돌려받을 수 있어요.
         </p>
       )}
@@ -152,7 +184,7 @@ function Timeline({ g }: { g: GroupView }) {
             <li key={s.key} className="flex gap-4">
               <div className="flex flex-col items-center">
                 <span
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
                     now ? "bg-accent text-white" : done ? "bg-ink text-white" : "bg-line text-muted"
                   }`}
                 >
@@ -160,9 +192,9 @@ function Timeline({ g }: { g: GroupView }) {
                 </span>
                 {i < STEPS.length - 1 && <span className={`w-px flex-1 ${done ? "bg-ink" : "bg-line"}`} />}
               </div>
-              <div className="pb-6">
-                <p className={`text-sm font-bold ${now ? "text-accent" : done ? "text-ink" : "text-muted"}`}>{s.label}</p>
-                <p className="text-sm text-muted">{s.desc}</p>
+              <div className="pb-7 pt-1.5">
+                <p className={`text-base font-bold ${now ? "text-accent" : done ? "text-ink" : "text-muted"}`}>{s.label}</p>
+                <p className="mt-0.5 text-[15px] text-muted">{s.desc}</p>
               </div>
             </li>
           );
