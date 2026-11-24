@@ -9,6 +9,7 @@ import { idHash, onchainGroup, onchainSeller } from "./chain.js";
 import { h, parse } from "./http.js";
 import { influencerRouter, oauthRouter } from "./influencers.js";
 import { usersRouter } from "./users.js";
+import { likesRouter } from "./likes.js";
 
 seedCatalog();
 
@@ -329,6 +330,7 @@ admin.post(
 app.use("/admin", admin);
 app.use(influencerRouter);
 app.use(usersRouter);
+app.use(likesRouter);
 app.use("/oauth", oauthRouter);
 
 // ─────────────── 에러 ───────────────

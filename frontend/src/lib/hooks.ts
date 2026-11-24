@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { chainBuyAbi } from "./contracts.generated";
 import { CHAINBUY_ADDRESS } from "./config";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OnchainGroup, toView, GroupView, Product, fallbackProducts } from "./groups";
 import { api, ApiProduct, SponsorTag, UserProfile } from "./api";
 
@@ -119,3 +119,32 @@ export function useMyGroups(address: `0x${string}` | undefined) {
 
 /** 아직 끝나지 않은 공구 (모집~배송 완료) */
 export const ONGOING = new Set(["OPEN", "PENDING_CHECK", "APPROVED", "PAID", "SHIPPED"]);
+
+/** 찜: 내가 찜한 공구 id 목록, 공구별 찜 수, 찜하기/해제 (화면에는 바로 반영) */
+export function useLikes(token: string | undefined) {
+  const qc = useQueryClient();
+  const mine = useQuery({
+    queryKey: ["likes", token],
+    queryFn: () => api<number[]>("/likes", { token }),
+    enabled: !!token,
+    refetchInterval: false,
+  });
+  const counts = useQuery({ queryKey: ["like-counts"], queryFn: () => api<Record<string, number>>("/likes/counts"), refetchInterval: 30_000, retry: 1 });
+  const set = useMemo(() => new Set(mine.data ?? []), [mine.data]);
+
+  const toggle = async (groupId: number) => {
+    if (!token) return;
+    const liked = set.has(groupId);
+    // 서버 응답을 기다리지 않고 먼저 화면을 바꾼다
+    qc.setQueryData<number[]>(["likes", token], (old = []) => (liked ? old.filter((x) => x !== groupId) : [groupId, ...old]));
+    qc.setQueryData<Record<string, number>>(["like-counts"], (old = {}) => ({ ...old, [groupId]: Math.max(0, (old[groupId] ?? 0) + (liked ? -1 : 1)) }));
+    try {
+      await api(`/likes/${groupId}`, { token, method: liked ? "DELETE" : "POST", body: liked ? undefined : {} });
+    } finally {
+      void qc.invalidateQueries({ queryKey: ["likes", token] });
+      void qc.invalidateQueries({ queryKey: ["like-counts"] });
+    }
+  };
+
+  return { liked: set, ids: mine.data ?? [], counts: counts.data ?? {}, toggle };
+}

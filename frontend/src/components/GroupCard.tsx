@@ -4,6 +4,7 @@ import Link from "next/link";
 import { GroupView, discountRate, remaining, won, STATUS_LABEL } from "@/lib/groups";
 import { ProductThumb } from "./ProductThumb";
 import { SponsorBadge } from "./SponsorBadge";
+import { LikeButton } from "./LikeButton";
 import { useSponsorTags } from "@/lib/hooks";
 
 export function GroupCard({ g, rank }: { g: GroupView; rank?: number }) {
@@ -12,7 +13,9 @@ export function GroupCard({ g, rank }: { g: GroupView; rank?: number }) {
   const open = g.statusName === "OPEN";
   const tags = useSponsorTags().get(Number(g.id));
 
+  // 하트 버튼은 링크 안에 넣지 않고(버튼 안 링크는 잘못된 HTML) 카드 위에 겹쳐 둔다
   return (
+    <div className="relative">
     <Link href={`/groups/${g.id}`} className="group block">
       <div className="relative overflow-hidden rounded-lg">
         <ProductThumb product={g.product} className="aspect-square w-full transition group-hover:scale-[1.02]" />
@@ -50,5 +53,9 @@ export function GroupCard({ g, rank }: { g: GroupView; rank?: number }) {
         </div>
       </div>
     </Link>
+      <div className="absolute right-1 top-1">
+        <LikeButton groupId={Number(g.id)} />
+      </div>
+    </div>
   );
 }
