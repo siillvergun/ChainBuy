@@ -161,6 +161,7 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
 
     error InvalidParams();
     error InactiveParty();
+    error NotSeller();
     error WrongStatus(Status current);
     error DeadlinePassed();
     error NotFinalizable();
@@ -237,7 +238,8 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
 
     // ─────────────────────────────── 공구 생성 ───────────────────────────────
 
-    /// @notice 입점 상품 공구. 누구나 열 수 있고, 결제 대상은 판매자 등록부 값으로 고정 (GB-01, GB-04).
+    /// @notice 입점 상품 공구. 등록된 판매자 지갑만 열 수 있고, 결제 대상은 판매자 등록부 값으로 고정 (GB-01, GB-04).
+    /// @dev 다른 사람이 판매자 상품으로 공구를 중복해서 여는 것을 막는다. (인플루언서 위탁은 이후 단계에서 추가)
     function createListedGroup(bytes32 sellerId, GroupParams calldata p)
         external
         whenNotPaused
@@ -245,6 +247,7 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
     {
         Seller memory s = sellers[sellerId];
         if (!s.active) revert InactiveParty();
+        if (msg.sender != s.wallet) revert NotSeller();
         id = _create(Kind.LISTED, msg.sender, sellerId, s.wallet, p);
     }
 

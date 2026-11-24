@@ -58,7 +58,7 @@ export async function deployFixture() {
   }
 
   async function createListed(overrides = {}) {
-    await chainBuy.connect(creator).createListedGroup(SELLER_ID, await params(overrides));
+    await chainBuy.connect(seller).createListedGroup(SELLER_ID, await params(overrides));
     return await chainBuy.groupCount();
   }
 

@@ -7,11 +7,14 @@ describe("05. 공격 시나리오 · 관리자 · 긴급 정지", () => {
   describe("결제 대상·금액 조작 차단 (수용 기준)", () => {
     it("공구 생성 함수에는 결제 주소를 넣을 자리가 없다 — 판매자 등록부 값만 쓰인다 (INV-2)", async () => {
       const { chainBuy, seller, mallory, params } = await loadFixture(deployFixture);
-      // mallory가 공구를 열어도 결제 대상은 등록된 판매자 지갑
-      await chainBuy.connect(mallory).createListedGroup(SELLER_ID, await params());
+      // 판매자가 아닌 사람은 판매자 상품으로 공구를 열 수조차 없다
+      await expect(chainBuy.connect(mallory).createListedGroup(SELLER_ID, await params())).to.be.revertedWithCustomError(
+        chainBuy,
+        "NotSeller"
+      );
+      await chainBuy.connect(seller).createListedGroup(SELLER_ID, await params());
       const g = await chainBuy.getGroup(await chainBuy.groupCount());
       expect(g.payee).to.equal(seller.address);
-      expect(g.creator).to.equal(mallory.address);
     });
 
     it("판매자 등록부 변경은 담당자만 할 수 있다", async () => {
@@ -148,11 +151,11 @@ describe("05. 공격 시나리오 · 관리자 · 긴급 정지", () => {
 
   describe("긴급 정지 (ADM-07, INV-8)", () => {
     it("정지 중에는 공구 생성·예치가 막힌다", async () => {
-      const { chainBuy, admin, alice, creator, reviewer, params, createListed } = await loadFixture(deployFixture);
+      const { chainBuy, admin, alice, creator, seller, reviewer, params, createListed } = await loadFixture(deployFixture);
       const id = await createListed();
       await chainBuy.connect(admin).pause();
       await expect(
-        chainBuy.connect(creator).createListedGroup(SELLER_ID, await params())
+        chainBuy.connect(seller).createListedGroup(SELLER_ID, await params())
       ).to.be.revertedWithCustomError(chainBuy, "EnforcedPause");
       await expect(
         chainBuy.connect(reviewer).createExternalGroup(ethers.id("merchant:big-mall"), creator.address, await params())

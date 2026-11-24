@@ -1,0 +1,171 @@
+{
+  "_note": "백엔드(api)가 생기기 전까지 쓰는 상품 정보 mock. productHash = keccak256(id). blockchain/scripts/seed.ts 도 이 파일을 읽는다.",
+  "sellers": [
+    {
+      "id": "seller:demo",
+      "name": "데일리 셀렉트"
+    }
+  ],
+  "products": [
+    {
+      "id": "product:earbuds-nc",
+      "name": "노이즈캔슬링 무선 이어폰",
+      "category": "디지털",
+      "option": "블랙 · 1개",
+      "originalPrice": 89000,
+      "price": 78300,
+      "tint": "#EEF2F7",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:coffee-ethiopia",
+      "name": "에티오피아 예가체프 원두 1kg",
+      "category": "식품",
+      "option": "홀빈 · 1kg",
+      "originalPrice": 32000,
+      "price": 25900,
+      "tint": "#F1E8DC",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:camping-chair",
+      "name": "캠핑용 접이식 경량 의자",
+      "category": "캠핑",
+      "option": "샌드 · 1개",
+      "originalPrice": 59000,
+      "price": 44900,
+      "tint": "#E7EEE6",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:air-filter",
+      "name": "공기청정기 교체 필터 2입",
+      "category": "생활",
+      "option": "호환형 · 2입",
+      "originalPrice": 28000,
+      "price": 21000,
+      "tint": "#F2F4EE",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:baby-wipes",
+      "name": "무향 아기 물티슈 20팩",
+      "category": "육아",
+      "option": "캡형 · 20팩",
+      "originalPrice": 31900,
+      "price": 24900,
+      "tint": "#EEF5F3",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:tumbler",
+      "name": "스테인리스 진공 텀블러 600ml",
+      "category": "주방",
+      "option": "아이보리 · 1개",
+      "originalPrice": 26000,
+      "price": 18900,
+      "tint": "#F4F1EC",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:protein",
+      "name": "식물성 단백질 쉐이크 30회분",
+      "category": "식품",
+      "option": "초코 · 1통",
+      "originalPrice": 45000,
+      "price": 36000,
+      "tint": "#F3ECE4",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:led-lantern",
+      "name": "충전식 LED 캠핑 랜턴",
+      "category": "캠핑",
+      "option": "웜화이트 · 1개",
+      "originalPrice": 39000,
+      "price": 29900,
+      "tint": "#EDEBE3",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:air-fryer",
+      "name": "5.5L 대용량 에어프라이어",
+      "category": "가전",
+      "option": "화이트 · 1대",
+      "originalPrice": 129000,
+      "price": 99000,
+      "tint": "#EEF0F3",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:sparkling",
+      "name": "무가당 탄산수 500ml 40병",
+      "category": "음료",
+      "option": "플레인 · 40병",
+      "originalPrice": 24900,
+      "price": 17900,
+      "tint": "#E8F1F5",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:sunscreen",
+      "name": "저자극 무기자차 선크림 2개",
+      "category": "뷰티",
+      "option": "50ml · 2개",
+      "originalPrice": 38000,
+      "price": 27900,
+      "tint": "#F7EEEA",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:cat-litter",
+      "name": "두부 고양이 모래 7L 6팩",
+      "category": "반려동물",
+      "option": "오리지널 · 6팩",
+      "originalPrice": 42000,
+      "price": 31500,
+      "tint": "#F3F0E8",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:yoga-mat",
+      "name": "TPE 요가 매트 8mm",
+      "category": "스포츠",
+      "option": "올리브 · 1개",
+      "originalPrice": 35000,
+      "price": 24900,
+      "tint": "#ECF1E8",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:fleece",
+      "name": "경량 플리스 집업",
+      "category": "패션",
+      "option": "아이보리 · M",
+      "originalPrice": 49000,
+      "price": 35900,
+      "tint": "#F2EFEA",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:omega3",
+      "name": "rTG 오메가3 180캡슐",
+      "category": "건강",
+      "option": "6개월분",
+      "originalPrice": 56000,
+      "price": 39900,
+      "tint": "#EEF3F1",
+      "seller": "seller:demo"
+    },
+    {
+      "id": "product:gel-pen",
+      "name": "0.5mm 젤펜 12자루 세트",
+      "category": "문구",
+      "option": "블랙 · 12자루",
+      "originalPrice": 15000,
+      "price": 9900,
+      "tint": "#F1F1F4",
+      "seller": "seller:demo"
+    }
+  ]
+}
