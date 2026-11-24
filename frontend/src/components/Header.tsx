@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { AccountMenu } from "./AccountMenu";
-import { useAuth } from "./AuthProvider";
 
 const NAV = [
   { href: "/", label: "홈" },
@@ -19,7 +18,6 @@ export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [q, setQ] = useState("");
-  const { session } = useAuth();
 
   return (
     <>
@@ -30,17 +28,6 @@ export function Header() {
         <div className="mx-auto max-w-page px-4 md:px-6">
           <div className="flex flex-wrap justify-end gap-4 pt-2.5 text-[13px] text-[#4A4A4A]">
             <AccountMenu />
-            <Link href="/seller" className="hover:text-ink">
-              판매자센터
-            </Link>
-            <Link href="/influencer" className="hover:text-ink">
-              인플루언서
-            </Link>
-            {session?.isReviewer && (
-              <Link href="/admin" className="font-bold text-ink hover:text-accent">
-                담당자
-              </Link>
-            )}
           </div>
           <div className="flex flex-wrap items-center gap-x-8 gap-y-3 py-3">
             <Link href="/" className="text-[28px] font-extrabold tracking-tight text-ink">
@@ -73,11 +60,8 @@ export function Header() {
               </button>
             </form>
             <div className="ml-auto flex gap-2.5">
-              <Link href="/create" className="btn-line">
+              <Link href="/create" className="btn-primary">
                 공동구매 열기
-              </Link>
-              <Link href="/my" className="btn-primary">
-                마이페이지
               </Link>
             </div>
           </div>

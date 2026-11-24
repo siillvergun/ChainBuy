@@ -7,6 +7,7 @@ import { useAccount, useReadContracts } from "wagmi";
 import { useGroup, useMe, useMyParticipation, useSponsorTags } from "@/lib/hooks";
 import { useAuth } from "@/components/AuthProvider";
 import { SponsorBadge } from "@/components/SponsorBadge";
+import { NetworkCheck } from "@/components/NetworkCheck";
 import { useTx } from "@/lib/useTx";
 import { chainBuyAbi, mockUsdcAbi } from "@/lib/contracts.generated";
 import { CHAINBUY_ADDRESS, USDC_ADDRESS, activeChain } from "@/lib/config";
@@ -277,6 +278,7 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
 
   return (
     <div className="flex flex-col gap-3">
+      <NetworkCheck />
       {myQty > 0 && (
         <div className="rounded-lg bg-accent-tint p-3 text-sm text-accent-dark">
           <strong>{myQty}개 참여 중</strong> · 예치 {won(participant?.deposited)}

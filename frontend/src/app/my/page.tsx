@@ -92,42 +92,63 @@ function AccountCard() {
   );
 }
 
-/** 판매자 · 인플루언서 · 담당자 상태와 바로가기 */
+/** 판매자 · 인플루언서 · 담당자: 지금 상태와, 다음에 할 일 버튼 */
 function Roles() {
   const { session } = useAuth();
   const token = session!.token;
   const seller = useQuery({ queryKey: ["seller-me", token], queryFn: () => api<Seller | null>("/sellers/me", { token }) });
   const inf = useQuery({ queryKey: ["influencer-me", token], queryFn: () => api<MyInfluencer | null>("/influencers/me", { token }) });
 
-  const sellerText = !seller.data
-    ? "입점 신청 전"
-    : seller.data.status === "approved"
-      ? `${seller.data.name} · 승인됨`
-      : seller.data.status === "pending"
-        ? `${seller.data.name} · 검토 중`
-        : "반려됨 · 다시 신청 가능";
-  const pendingTags = inf.data?.tags.filter((t) => t.status === "pending").length ?? 0;
-  const infText = !inf.data ? "프로필 없음" : `@${inf.data.handle} · ${inf.data.verified ? "SNS 인증됨" : "인증 전"}${pendingTags ? ` · 수락 대기 ${pendingTags}건` : ""}`;
+  const s = seller.data;
+  const sellerCard = !s
+    ? { status: "아직 판매자가 아니에요", desc: "내 상품을 등록하고 직접 공구를 열 수 있어요", cta: "판매자 입점 신청하기", active: false }
+    : s.status === "approved"
+      ? { status: `${s.name} · 승인됨`, desc: "상품 등록, 공구 열기, 협찬 인플루언서 태그", cta: "판매자센터", active: true }
+      : s.status === "pending"
+        ? { status: `${s.name} · 검토 중`, desc: "담당자가 확인하면 상품을 올릴 수 있어요", cta: "신청 내용 보기", active: false }
+        : { status: "반려됨", desc: s.rejectReason ?? "", cta: "다시 신청하기", active: false };
+
+  const i = inf.data;
+  const pendingTags = i?.tags.filter((t) => t.status === "pending").length ?? 0;
+  const infCard = !i
+    ? { status: "아직 인플루언서가 아니에요", desc: "SNS 계정을 인증하면 판매자가 공구에 협찬으로 태그할 수 있어요", cta: "인플루언서 인증하기", active: false }
+    : !i.verified
+      ? { status: `@${i.handle} · 인증 전`, desc: "YouTube·Instagram·Threads·TikTok 중 하나를 연결해 주세요", cta: "SNS 계정 인증하기", active: false }
+      : {
+          status: `@${i.handle} · 인증됨`,
+          desc: pendingTags ? `수락 대기 중인 협찬 태그 ${pendingTags}건` : i.accounts.map((a) => a.label).join(" · "),
+          cta: pendingTags ? "태그 확인하기" : "인플루언서 관리",
+          active: true,
+        };
 
   return (
-    <section className="grid gap-3 sm:grid-cols-3">
-      <RoleCard href="/seller" title="판매자센터" text={sellerText} active={seller.data?.status === "approved"} />
-      <RoleCard href="/influencer" title="인플루언서" text={infText} active={!!inf.data?.verified} />
-      {session!.isReviewer ? (
-        <RoleCard href="/admin" title="담당자" text="입점 신청·공구 제안 검토" active />
-      ) : (
-        <RoleCard href="/create" title="공구 제안" text="써 보고 좋았던 상품을 링크로 제안" />
+    <section className="flex flex-col gap-4">
+      <h2 className="section-title">판매자 · 인플루언서</h2>
+      <div className="grid gap-3 md:grid-cols-2">
+        <RoleCard href="/seller" title="판매자" {...sellerCard} />
+        <RoleCard href="/influencer" title="인플루언서" {...infCard} />
+      </div>
+      {session!.isReviewer && (
+        <Link href="/admin" className="btn-line self-start">
+          담당자 화면 (입점 신청·공구 제안 검토)
+        </Link>
       )}
     </section>
   );
 }
 
-function RoleCard({ href, title, text, active }: { href: string; title: string; text: string; active?: boolean }) {
+function RoleCard({ href, title, status, desc, cta, active }: { href: string; title: string; status: string; desc: string; cta: string; active: boolean }) {
   return (
-    <Link href={href} className={`flex flex-col gap-1 rounded-xl border p-5 hover:border-ink ${active ? "border-safe" : "border-line"}`}>
-      <strong className="text-base">{title} ›</strong>
-      <span className={`text-sm ${active ? "font-bold text-safe" : "text-muted"}`}>{text}</span>
-    </Link>
+    <div className={`flex flex-col gap-3 rounded-xl border p-5 ${active ? "border-safe" : "border-line"}`}>
+      <div>
+        <span className="text-xs font-bold text-muted">{title}</span>
+        <strong className={`mt-0.5 block text-base ${active ? "text-safe" : ""}`}>{status}</strong>
+        {desc && <p className="mt-1 text-sm text-muted">{desc}</p>}
+      </div>
+      <Link href={href} className={`${active ? "btn-line" : "btn-dark"} self-start`}>
+        {cta}
+      </Link>
+    </div>
   );
 }
 
