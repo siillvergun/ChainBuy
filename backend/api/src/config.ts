@@ -36,3 +36,8 @@ export const ALLOWED_MALLS: Record<string, string> = {
 export const CATEGORIES = [
   "디지털", "가전", "식품", "음료", "캠핑", "생활", "주방", "육아", "뷰티", "반려동물", "스포츠", "패션", "건강", "문구",
 ];
+
+/** OAuth 콜백을 받을 이 API의 공개 주소 (각 플랫폼 앱 설정의 Redirect URI = `${API_PUBLIC_URL}/oauth/<platform>/callback`) */
+export const API_PUBLIC_URL = process.env.API_PUBLIC_URL ?? `http://localhost:${PORT}`;
+/** 개발용 가짜 OAuth (실제 앱 키 없이 흐름 테스트). 배포 환경에서는 꺼진다. */
+export const ENABLE_MOCK_OAUTH = process.env.ENABLE_MOCK_OAUTH ? process.env.ENABLE_MOCK_OAUTH === "1" : process.env.NODE_ENV !== "production";

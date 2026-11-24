@@ -6,6 +6,8 @@ import { ALLOWED_MALLS, CATEGORIES, PORT, WEB_ORIGIN } from "./config.js";
 import { db, seedCatalog } from "./db.js";
 import { HttpError, issueNonce, requireAuth, requireReviewer, verifyLogin } from "./auth.js";
 import { idHash, onchainGroup, onchainSeller } from "./chain.js";
+import { h, parse } from "./http.js";
+import { influencerRouter, oauthRouter } from "./influencers.js";
 
 seedCatalog();
 
@@ -17,16 +19,6 @@ const shortId = () => crypto.randomBytes(6).toString("hex");
 const TINTS = ["#EEF2F7", "#F1E8DC", "#E7EEE6", "#F2F4EE", "#EEF5F3", "#F4F1EC", "#F3ECE4", "#EDEBE3"];
 const tint = () => TINTS[Math.floor(Math.random() * TINTS.length)];
 
-/** async 라우트 에러를 에러 핸들러로 넘긴다 */
-const h =
-  (fn: (req: Request, res: Response) => Promise<unknown> | unknown) => (req: Request, res: Response, next: NextFunction) =>
-    Promise.resolve(fn(req, res)).catch(next);
-
-const parse = <T>(schema: z.ZodType<T>, body: unknown): T => {
-  const r = schema.safeParse(body);
-  if (!r.success) throw new HttpError(400, r.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", "));
-  return r.data;
-};
 
 // ─────────────── 공통 ───────────────
 
@@ -334,6 +326,8 @@ admin.post(
 );
 
 app.use("/admin", admin);
+app.use(influencerRouter);
+app.use("/oauth", oauthRouter);
 
 // ─────────────── 에러 ───────────────
 
