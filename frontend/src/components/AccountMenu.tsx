@@ -18,7 +18,7 @@ import { useAuth } from "./AuthProvider";
 export function UtilityLinks() {
   const mounted = useMounted();
   const pathname = usePathname();
-  const { session, logout } = useAuth();
+  const { session, expired, logout } = useAuth();
   const { disconnect } = useDisconnect();
   const me = useMe(session?.token);
   const seller = useQuery({
@@ -30,8 +30,8 @@ export function UtilityLinks() {
   const items: React.ReactNode[] = [];
   if (!mounted || !session) {
     items.push(
-      <Link key="login" href={`/login?next=${encodeURIComponent(pathname)}`} className="font-bold text-ink hover:text-accent">
-        로그인
+      <Link key="login" href={`/login?next=${encodeURIComponent(pathname)}`} className={`font-bold hover:text-accent ${expired && mounted ? "text-accent" : "text-ink"}`}>
+        {expired && mounted ? "로그인 만료 · 다시 로그인" : "로그인"}
       </Link>
     );
   } else {

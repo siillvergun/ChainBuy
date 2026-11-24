@@ -231,7 +231,7 @@ function Timeline({ g }: { g: GroupView }) {
 
 function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
   const { address, isConnected } = useAccount();
-  const { session } = useAuth();
+  const { session, expired } = useAuth();
   const me = useMe(session?.token);
   const recipientHash = me.data?.recipientHash ?? null;
   const here = `/groups/${g.id}`;
@@ -312,7 +312,7 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
 
           {!session ? (
             <Link href={`/login?next=${encodeURIComponent(here)}`} className="btn-primary h-[52px] text-base">
-              로그인하고 참여하기
+              {expired ? "로그인이 만료됐어요 · 다시 로그인" : "로그인하고 참여하기"}
             </Link>
           ) : !recipientHash ? (
             <div className="flex flex-col gap-2 rounded-lg border border-accent-line bg-accent-tint p-4 text-sm text-accent-dark">
