@@ -71,6 +71,12 @@ async function main() {
   const seller = await login(KEYS.newSeller);
   const proposer = await login(KEYS.proposer);
   check("지갑 서명 로그인", !!seller.token && reviewer.isReviewer && !seller.isReviewer);
+  let r0 = await api("/auth/me", { token: seller.token });
+  check("로그인 응답에 만료 시각, /auth/me로 토큰 확인", r0.status === 200 && r0.data.address === seller.address && r0.data.expiresAt > Date.now());
+  r0 = await api("/auth/me", { token: "invalid-token" });
+  check("무효 토큰은 401 + 만료 안내", r0.status === 401 && String(r0.data?.error).includes("만료"));
+  r0 = await api("/auth/me");
+  check("토큰 없이 요청하면 401 + 로그인 안내", r0.status === 401 && String(r0.data?.error).includes("로그인해"));
 
   // ── 판매자 플로우 ──
   let r = await api("/sellers", { token: seller.token, body: { name: "오늘의 커피", bizNo: "123-45-67890", contact: "010-1234-5678" } });

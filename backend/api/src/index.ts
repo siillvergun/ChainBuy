@@ -5,7 +5,7 @@ import { z } from "zod";
 import { ALLOWED_MALLS, CATEGORIES, PORT, WEB_ORIGIN } from "./config.js";
 import { db, seedCatalog } from "./db.js";
 import { HttpError, issueNonce, requireAuth, requireReviewer, verifyLogin } from "./auth.js";
-import { idHash, onchainGroup, onchainSeller } from "./chain.js";
+import { idHash, isReviewer, onchainGroup, onchainSeller } from "./chain.js";
 import { h, parse } from "./http.js";
 import { influencerRouter, oauthRouter } from "./influencers.js";
 import { usersRouter } from "./users.js";
@@ -36,6 +36,15 @@ app.post(
       req.body
     );
     res.json(await verifyLogin(address, signature as `0x${string}`));
+  })
+);
+
+/** 저장해 둔 토큰이 아직 유효한지 확인 (만료·서버 초기화 감지) */
+app.get(
+  "/auth/me",
+  requireAuth,
+  h(async (req, res) => {
+    res.json({ address: req.address, expiresAt: req.sessionExpiresAt, isReviewer: await isReviewer(req.address!).catch(() => false) });
   })
 );
 

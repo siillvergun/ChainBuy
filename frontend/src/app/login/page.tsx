@@ -30,7 +30,7 @@ function Login() {
   const next = safeNext(useSearchParams().get("next"));
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
-  const { session, login, loggingIn, error } = useAuth();
+  const { session, expired, login, loggingIn, error } = useAuth();
 
   useEffect(() => {
     if (session) router.replace(next);
@@ -60,6 +60,7 @@ function Login() {
         </Step>
       </ol>
 
+      {expired && <Notice tone="error">로그인이 만료됐어요. 서명을 한 번 더 하면 다시 로그인돼요.</Notice>}
       {error && <Notice tone="error">{error}</Notice>}
       {!connectors[0] && <Notice tone="error">브라우저 지갑을 찾지 못했어요. MetaMask를 설치한 뒤 새로고침해 주세요.</Notice>}
 

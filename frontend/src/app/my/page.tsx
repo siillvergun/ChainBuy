@@ -13,7 +13,7 @@ import { useAuth } from "@/components/AuthProvider";
 /** 마이페이지: 계정 · 내 역할 · 참여 내역 · 공구 제안 */
 export default function MyPage() {
   const [mounted, setMounted] = useState(false);
-  const { session } = useAuth();
+  const { session, expired } = useAuth();
   useEffect(() => setMounted(true), []);
 
   return (
@@ -21,9 +21,9 @@ export default function MyPage() {
       <h1 className="text-[28px] font-extrabold tracking-tight">마이페이지</h1>
       {!mounted ? null : !session ? (
         <div className="flex flex-col items-start gap-3 rounded-xl border border-line bg-paper p-6">
-          <strong className="text-lg">로그인하면 참여 내역과 내 정보를 볼 수 있어요</strong>
+          <strong className="text-lg">{expired ? "로그인이 만료됐어요. 다시 로그인해 주세요" : "로그인하면 참여 내역과 내 정보를 볼 수 있어요"}</strong>
           <Link href="/login?next=/my" className="btn-primary h-12 px-6">
-            지갑으로 로그인
+            {expired ? "다시 로그인" : "지갑으로 로그인"}
           </Link>
         </div>
       ) : (

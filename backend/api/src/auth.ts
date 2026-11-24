@@ -39,8 +39,9 @@ export async function verifyLogin(raw: string, signature: `0x${string}`) {
   if (!ok) throw new HttpError(401, "서명이 지갑 주소와 맞지 않아요.");
   db.prepare("DELETE FROM nonces WHERE address = ?").run(address); // 같은 서명 재사용 방지
   const token = crypto.randomBytes(24).toString("hex");
-  db.prepare("INSERT INTO sessions (token, address, expires_at) VALUES (?, ?, ?)").run(token, address, Date.now() + SESSION_TTL);
-  return { token, address, isReviewer: await isReviewer(address).catch(() => false) };
+  const expiresAt = Date.now() + SESSION_TTL;
+  db.prepare("INSERT INTO sessions (token, address, expires_at) VALUES (?, ?, ?)").run(token, address, expiresAt);
+  return { token, address, expiresAt, isReviewer: await isReviewer(address).catch(() => false) };
 }
 
 export class HttpError extends Error {
@@ -55,6 +56,7 @@ export class HttpError extends Error {
 declare module "express-serve-static-core" {
   interface Request {
     address?: `0x${string}`;
+    sessionExpiresAt?: number;
   }
 }
 
@@ -65,8 +67,9 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
         | { address: `0x${string}`; expires_at: number }
         | undefined)
     : undefined;
-  if (!row || row.expires_at < Date.now()) return next(new HttpError(401, "지갑으로 로그인해 주세요."));
+  if (!row || row.expires_at < Date.now()) return next(new HttpError(401, token ? "로그인이 만료됐어요. 다시 로그인해 주세요." : "지갑으로 로그인해 주세요."));
   req.address = row.address;
+  req.sessionExpiresAt = row.expires_at;
   next();
 }
 

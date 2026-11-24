@@ -1,6 +1,9 @@
 /** 백엔드(backend/api) 호출. 체인 밖 정보(상품·판매자·제안)만 다룬다. */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
+/** 토큰을 보낸 요청이 401을 받으면 이 이벤트를 띄워 AuthProvider가 세션을 만료 처리한다 */
+export const SESSION_EXPIRED_EVENT = "chainbuy:session-expired";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -25,6 +28,7 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
     throw new ApiError(0, "서버에 연결할 수 없어요. backend/api 가 실행 중인지 확인해 주세요.");
   }
   const data = await res.json().catch(() => null);
+  if (res.status === 401 && opts.token && typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
   if (!res.ok) throw new ApiError(res.status, data?.error ?? `요청 실패 (${res.status})`);
   return data as T;
 }
