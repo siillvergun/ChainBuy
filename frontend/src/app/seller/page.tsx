@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
-import { api, ApiProduct, Seller } from "@/lib/api";
+import { api, ApiProduct, Influencer, Seller } from "@/lib/api";
 import { chainBuyAbi } from "@/lib/contracts.generated";
 import { CHAINBUY_ADDRESS } from "@/lib/config";
 import { createdGroupId, deadlineIn } from "@/lib/createdGroup";
@@ -224,8 +224,11 @@ function ProductForm({ onDone }: { onDone: () => void }) {
 function ProductRow({ p, seller }: { p: ApiProduct; seller: Seller }) {
   const [open, setOpen] = useState(false);
   const tx = useTx();
-  const [o, setO] = useState({ price: p.price, target: 20, perUser: 2, days: 3 });
+  const { session } = useAuth();
+  const [o, setO] = useState({ price: p.price, target: 20, perUser: 2, days: 3, influencer: "" });
   const [created, setCreated] = useState<bigint | null>(null);
+  const [tagMsg, setTagMsg] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const influencers = useQuery({ queryKey: ["influencers"], queryFn: () => api<Influencer[]>("/influencers"), enabled: open });
   const invalid = o.price <= 0 || o.target < 2 || o.perUser < 1 || o.perUser > o.target || o.days < 1;
 
   const openGroup = async () => {
@@ -239,8 +242,19 @@ function ProductRow({ p, seller }: { p: ApiProduct; seller: Seller }) {
           { productHash: p.productHash, maxPrice: toToken(o.price), targetQty: o.target, maxPerUser: o.perUser, deadline: deadlineIn(o.days) },
         ],
       });
-      setCreated(createdGroupId(receipt));
+      const id = createdGroupId(receipt);
+      setCreated(id);
       setOpen(false);
+      setTagMsg(null);
+      // 협찬 인플루언서 태그 요청 (인플루언서가 수락해야 공개)
+      if (id && o.influencer) {
+        try {
+          await api(`/groups/${id}/tags`, { token: session!.token, body: { handle: o.influencer } });
+          setTagMsg({ tone: "ok", text: `@${o.influencer}에게 협찬 태그를 보냈어요. 인플루언서가 수락하면 공구에 표시돼요.` });
+        } catch (e) {
+          setTagMsg({ tone: "error", text: `태그 요청 실패: ${(e as Error).message}` });
+        }
+      }
     } catch {
       /* tx.error 표시 */
     }
@@ -270,6 +284,11 @@ function ProductRow({ p, seller }: { p: ApiProduct; seller: Seller }) {
           </Notice>
         </div>
       )}
+      {tagMsg && (
+        <div className="mt-3">
+          <Notice tone={tagMsg.tone}>{tagMsg.text}</Notice>
+        </div>
+      )}
       {open && (
         <div className="mt-4 flex flex-col gap-4 border-t border-line pt-4">
           <div className="grid gap-3 sm:grid-cols-4">
@@ -286,6 +305,16 @@ function ProductRow({ p, seller }: { p: ApiProduct; seller: Seller }) {
               <input className="input" type="number" min={1} max={30} value={o.days} onChange={(e) => setO({ ...o, days: Number(e.target.value) })} />
             </Field>
           </div>
+          <Field label="협찬 인플루언서 (선택)" hint="SNS 인증을 마친 인플루언서만 고를 수 있어요. 인플루언서가 수락하면 '광고 · 협찬' 배지가 붙어요">
+            <select className="input" value={o.influencer} onChange={(e) => setO({ ...o, influencer: e.target.value })}>
+              <option value="">없음</option>
+              {(influencers.data ?? []).map((i) => (
+                <option key={i.handle} value={i.handle}>
+                  @{i.handle} · {i.name} ({i.accounts.map((a) => a.label).join(", ")})
+                </option>
+              ))}
+            </select>
+          </Field>
           <p className="text-sm text-muted">공구를 열면 조건이 체인에 고정돼요. 플랫폼 수수료 5%는 판매 대금에서 빠져요.</p>
           {tx.error && <Notice tone="error">{tx.error}</Notice>}
           <button type="button" className="btn-primary h-12 self-start px-6" disabled={invalid || !!tx.pending} onClick={openGroup}>

@@ -3,6 +3,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+// backend/api/.env 가 있으면 읽는다 (OAuth 앱 키 등). 없으면 무시.
+try {
+  process.loadEnvFile(path.join(here, "..", ".env"));
+} catch {
+  /* .env 없음 */
+}
 const root = path.join(here, "..", "..", "..");
 
 export const PORT = Number(process.env.PORT ?? 4000);

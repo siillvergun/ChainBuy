@@ -81,3 +81,24 @@ export type Proposal = {
 };
 
 export const STATUS_KO = { pending: "검토 중", approved: "승인", rejected: "거절" } as const;
+
+export type LinkedAccount = { platform: string; label: string; username: string; url: string; verifiedAt: number };
+
+export type Influencer = {
+  address: `0x${string}`;
+  handle: string;
+  name: string;
+  bio: string;
+  verified: boolean;
+  accounts: LinkedAccount[];
+};
+
+export type MyInfluencer = Influencer & {
+  tags: { groupId: number; seller: string; status: "pending" | "accepted" | "rejected" | "removed"; createdAt: number }[];
+};
+
+export type PublicInfluencer = Influencer & { groupIds: number[] };
+
+export type SponsorTag = { groupId: number; handle: string; name: string; platforms: string[] };
+
+export type OAuthProvider = { platform: string; label: string; enabled: boolean };

@@ -4,7 +4,8 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { keccak256, toBytes } from "viem";
 import { useAccount, useReadContracts } from "wagmi";
-import { useGroup, useMyParticipation } from "@/lib/hooks";
+import { useGroup, useMyParticipation, useSponsorTags } from "@/lib/hooks";
+import { SponsorBadge } from "@/components/SponsorBadge";
 import { useTx } from "@/lib/useTx";
 import { chainBuyAbi, mockUsdcAbi } from "@/lib/contracts.generated";
 import { CHAINBUY_ADDRESS, USDC_ADDRESS, activeChain } from "@/lib/config";
@@ -30,6 +31,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
 }
 
 function Detail({ g, refetch }: { g: GroupView; refetch: () => void }) {
+  const tags = useSponsorTags().get(Number(g.id));
   const rate = discountRate(g.product, g.maxPrice);
   const pct = Math.min(100, Math.round((g.totalQty / g.targetQty) * 100));
 
@@ -53,6 +55,7 @@ function Detail({ g, refetch }: { g: GroupView; refetch: () => void }) {
             <span className="rounded bg-safe-tint px-2 py-1 text-safe">안심결제</span>
             <span className="rounded bg-[#F1F1F1] px-2 py-1 text-[#4A4A4A]">{STATUS_LABEL[g.statusName]}</span>
           </div>
+          <SponsorBadge tags={tags} size="md" />
           <h1 className="text-2xl font-extrabold leading-snug tracking-tight">{g.product?.name ?? `공구 #${g.id}`}</h1>
           {(g.product?.sellerName || g.product?.url) && (
             <p className="-mt-2 text-sm text-muted">
