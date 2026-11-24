@@ -27,8 +27,8 @@ export function Header() {
       <header className="border-b border-line bg-white">
         <div className="mx-auto max-w-page px-4 md:px-6">
           <UtilityLinks />
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 md:gap-x-8">
-            <Link href="/" className="text-[28px] font-extrabold tracking-tight text-ink">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3 py-3 md:gap-x-8">
+            <Link href="/" className="text-[24px] font-extrabold tracking-tight text-ink sm:text-[28px]">
               Chain<span className="text-accent">Buy</span>
             </Link>
             <form

@@ -8,6 +8,7 @@ import { useGroup, useMe, useMyParticipation, useSponsorTags } from "@/lib/hooks
 import { useAuth } from "@/components/AuthProvider";
 import { SponsorBadge } from "@/components/SponsorBadge";
 import { NetworkCheck } from "@/components/NetworkCheck";
+import { LikeButton } from "@/components/LikeButton";
 import { useTx } from "@/lib/useTx";
 import { chainBuyAbi, mockUsdcAbi } from "@/lib/contracts.generated";
 import { CHAINBUY_ADDRESS, USDC_ADDRESS, activeChain } from "@/lib/config";
@@ -58,7 +59,10 @@ function Detail({ g, refetch }: { g: GroupView; refetch: () => void }) {
             <span className="rounded bg-[#F1F1F1] px-2 py-1 text-[#4A4A4A]">{STATUS_LABEL[g.statusName]}</span>
           </div>
           <SponsorBadge tags={tags} size="md" />
-          <h1 className="text-2xl font-extrabold leading-snug tracking-tight">{g.product?.name ?? `공구 #${g.id}`}</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-extrabold leading-snug tracking-tight">{g.product?.name ?? `공구 #${g.id}`}</h1>
+            <LikeButton groupId={Number(g.id)} variant="plain" showCount />
+          </div>
           {(g.product?.sellerName || g.product?.url) && (
             <p className="-mt-2 text-sm text-muted">
               {g.product.sellerName && <>판매자 {g.product.sellerName}</>}

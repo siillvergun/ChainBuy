@@ -70,7 +70,7 @@ export function UtilityLinks() {
   );
 }
 
-/** 검색창 옆 아이콘 버튼: 공구 열기 · 마이 · 장바구니(참여 중인 공구 개수 배지) */
+/** 검색창 옆 아이콘 버튼: 공구 열기 · 찜 · 마이 · 장바구니(참여 중인 공구 개수 배지) */
 export function IconButtons() {
   const mounted = useMounted();
   const { session } = useAuth();
@@ -79,8 +79,13 @@ export function IconButtons() {
   const loginFirst = (to: string) => (mounted && session ? to : `/login?next=${encodeURIComponent(to)}`);
 
   return (
-    <nav aria-label="바로가기" className="ml-auto flex items-center gap-1 sm:gap-3">
+    <nav aria-label="바로가기" className="ml-auto flex items-center sm:gap-3">
       <IconLink href="/create" label="공구 열기" icon={<path d="M12 5v14M5 12h14" />} />
+      <IconLink
+        href={loginFirst("/likes")}
+        label="찜"
+        icon={<path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" />}
+      />
       <IconLink href={loginFirst("/my")} label="마이" icon={<><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" /></>} />
       <IconLink
         href={loginFirst("/cart")}
@@ -94,15 +99,15 @@ export function IconButtons() {
 
 function IconLink({ href, label, icon, badge = 0 }: { href: string; label: string; icon: React.ReactNode; badge?: number }) {
   return (
-    <Link href={href} className="group relative flex w-14 flex-col items-center gap-0.5 py-1 text-[12px] text-[#4A4A4A] hover:text-ink sm:w-16">
-      <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <Link href={href} className="group relative flex w-12 flex-col items-center gap-0.5 py-1 text-[11px] text-[#4A4A4A] hover:text-ink sm:w-16 sm:text-[12px]">
+      <svg viewBox="0 0 24 24" className="h-6 w-6 sm:h-7 sm:w-7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         {icon}
       </svg>
       <span className="whitespace-nowrap">{label}</span>
       {badge > 0 && (
         <span
           aria-label={`참여 중 ${badge}건`}
-          className="absolute right-1.5 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-white sm:right-2.5"
+          className="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-white sm:right-2.5"
         >
           {badge > 99 ? "99+" : badge}
         </span>
