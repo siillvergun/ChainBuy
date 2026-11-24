@@ -109,6 +109,11 @@ export const chainBuyAbi = [
   },
   {
     "inputs": [],
+    "name": "NotSeller",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "NothingToRefund",
     "type": "error"
   },

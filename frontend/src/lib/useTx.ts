@@ -16,8 +16,9 @@ export function useTx() {
     setPending(label);
     try {
       const hash = await writeContractAsync(params);
-      await client!.waitForTransactionReceipt({ hash });
-      return hash;
+      const receipt = await client!.waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") throw new Error("트랜잭션이 실패했어요.");
+      return receipt;
     } catch (e) {
       const msg = e instanceof BaseError ? e.shortMessage : String(e);
       setError(msg.includes("User rejected") ? "지갑에서 요청을 거절했어요." : msg);

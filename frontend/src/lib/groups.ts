@@ -2,7 +2,19 @@ import { formatUnits, keccak256, parseUnits, toBytes } from "viem";
 import catalog from "./catalog.json";
 import { TOKEN_DECIMALS } from "./config";
 
-export type Product = (typeof catalog.products)[number];
+/** 화면에 쓰는 상품 정보 (백엔드 /products, 없으면 catalog.json mock) */
+export type Product = {
+  id: string;
+  name: string;
+  category: string;
+  option: string;
+  originalPrice: number;
+  price: number;
+  tint: string;
+  description?: string;
+  url?: string | null;
+  sellerName?: string | null;
+};
 
 export const STATUS = [
   "OPEN",
@@ -60,7 +72,8 @@ export type GroupView = OnchainGroup & {
   product: Product | undefined;
 };
 
-const byHash = new Map(catalog.products.map((p) => [productHash(p.id), p]));
+/** 백엔드가 꺼져 있을 때 쓰는 mock 상품 목록 */
+export const fallbackProducts = new Map<string, Product>(catalog.products.map((p) => [productHash(p.id), p]));
 
 export function productHash(productId: string): `0x${string}` {
   return keccak256(toBytes(productId));
@@ -70,13 +83,13 @@ export function sellerIdHash(sellerId: string): `0x${string}` {
   return keccak256(toBytes(sellerId));
 }
 
-export function toView(id: bigint, g: OnchainGroup): GroupView {
+export function toView(id: bigint, g: OnchainGroup, products: Map<string, Product> = fallbackProducts): GroupView {
   return {
     ...g,
     id,
     statusName: STATUS[g.status],
     isListed: g.kind === 0,
-    product: byHash.get(g.productHash),
+    product: products.get(g.productHash) ?? fallbackProducts.get(g.productHash),
   };
 }
 

@@ -4,12 +4,32 @@ import { useMemo } from "react";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { chainBuyAbi } from "./contracts.generated";
 import { CHAINBUY_ADDRESS } from "./config";
-import { OnchainGroup, toView, GroupView } from "./groups";
+import { useQuery } from "@tanstack/react-query";
+import { OnchainGroup, toView, GroupView, Product, fallbackProducts } from "./groups";
+import { api, ApiProduct } from "./api";
 
 const cb = { address: CHAINBUY_ADDRESS, abi: chainBuyAbi } as const;
 
+/** 상품 정보(이름·카테고리 등)를 백엔드에서 가져와 productHash로 찾는 표를 만든다 */
+export function useProducts() {
+  const q = useQuery({
+    queryKey: ["products"],
+    queryFn: () => api<ApiProduct[]>("/products"),
+    refetchInterval: 30_000,
+    retry: 1,
+  });
+  const map = useMemo(() => {
+    if (!q.data) return fallbackProducts;
+    const m = new Map<string, Product>(fallbackProducts);
+    for (const p of q.data) m.set(p.productHash, p);
+    return m;
+  }, [q.data]);
+  return { map, list: q.data, isLoading: q.isLoading, error: q.error, refetch: q.refetch };
+}
+
 /** 모든 공구를 체인에서 읽는다. (백엔드 이벤트 수집이 생기면 api로 바꾼다) */
 export function useGroups() {
+  const products = useProducts();
   const count = useReadContract({ ...cb, functionName: "groupCount", query: { enabled: !!CHAINBUY_ADDRESS } });
   const n = Number(count.data ?? 0n);
   const ids = useMemo(() => Array.from({ length: n }, (_, i) => BigInt(i + 1)), [n]);
@@ -22,9 +42,9 @@ export function useGroups() {
   const groups: GroupView[] = useMemo(
     () =>
       (res.data ?? [])
-        .map((r, i) => (r.status === "success" ? toView(ids[i], r.result as unknown as OnchainGroup) : null))
+        .map((r, i) => (r.status === "success" ? toView(ids[i], r.result as unknown as OnchainGroup, products.map) : null))
         .filter((g): g is GroupView => g !== null),
-    [res.data, ids]
+    [res.data, ids, products.map]
   );
 
   return {
@@ -39,8 +59,9 @@ export function useGroups() {
 }
 
 export function useGroup(id: bigint) {
+  const products = useProducts();
   const res = useReadContract({ ...cb, functionName: "getGroup", args: [id], query: { enabled: !!CHAINBUY_ADDRESS } });
-  const group = res.data ? toView(id, res.data as unknown as OnchainGroup) : undefined;
+  const group = res.data ? toView(id, res.data as unknown as OnchainGroup, products.map) : undefined;
   return { group, isLoading: res.isLoading, error: res.error, refetch: res.refetch };
 }
 

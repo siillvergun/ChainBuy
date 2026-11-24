@@ -31,7 +31,8 @@ export function GroupCard({ g, rank }: { g: GroupView; rank?: number }) {
           {rate > 0 && <span className="text-lg font-extrabold text-accent">{rate}%</span>}
           <span className="text-lg font-extrabold">{won(g.maxPrice)}</span>
         </div>
-        {g.product && <span className="text-xs text-muted line-through">{g.product.originalPrice.toLocaleString()}원</span>}
+        {g.product && rate > 0 && <span className="text-xs text-muted line-through">{g.product.originalPrice.toLocaleString()}원</span>}
+        {g.product && rate === 0 && !g.isListed && <span className="text-xs text-muted">쇼핑몰 현재가 {g.product.originalPrice.toLocaleString()}원</span>}
         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
           <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
         </div>

@@ -54,9 +54,25 @@ function Detail({ g, refetch }: { g: GroupView; refetch: () => void }) {
             <span className="rounded bg-[#F1F1F1] px-2 py-1 text-[#4A4A4A]">{STATUS_LABEL[g.statusName]}</span>
           </div>
           <h1 className="text-2xl font-extrabold leading-snug tracking-tight">{g.product?.name ?? `공구 #${g.id}`}</h1>
+          {(g.product?.sellerName || g.product?.url) && (
+            <p className="-mt-2 text-sm text-muted">
+              {g.product.sellerName && <>판매자 {g.product.sellerName}</>}
+              {g.product.url && (
+                <a href={g.product.url} target="_blank" rel="noreferrer" className="font-bold text-accent">
+                  원본 상품 페이지 ↗
+                </a>
+              )}
+            </p>
+          )}
+          {g.product?.description && <p className="text-[15px] leading-6 text-[#4A4A4A]">{g.product.description}</p>}
 
           <div>
-            {g.product && <p className="text-sm text-muted line-through">{g.product.originalPrice.toLocaleString()}원</p>}
+            {g.product &&
+              (rate > 0 ? (
+                <p className="text-sm text-muted line-through">{g.product.originalPrice.toLocaleString()}원</p>
+              ) : (
+                !g.isListed && <p className="text-sm text-muted">쇼핑몰 현재가 {g.product.originalPrice.toLocaleString()}원</p>
+              ))}
             <p className="flex items-baseline gap-2">
               {rate > 0 && <span className="text-3xl font-extrabold text-accent">{rate}%</span>}
               <span className="text-3xl font-extrabold">{won(g.maxPrice)}</span>

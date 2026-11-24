@@ -9,6 +9,9 @@ import { CHAINBUY_ADDRESS } from "@/lib/config";
 import { STATUS_LABEL, won } from "@/lib/groups";
 import { ProductThumb } from "@/components/ProductThumb";
 import { ChainNotice, Empty } from "@/components/States";
+import { useQuery } from "@tanstack/react-query";
+import { api, Proposal, STATUS_KO } from "@/lib/api";
+import { useAuth } from "@/components/AuthProvider";
 
 type P = { qty: number; deposited: bigint; refunded: boolean; receipt: number };
 
@@ -79,9 +82,44 @@ export default function MyPage() {
               ))}
             </ul>
           )}
+          <MyProposals />
         </>
       )}
     </div>
+  );
+}
+
+/** 내가 제안한 외부 상품 공구 (로그인했을 때만) */
+function MyProposals() {
+  const { session } = useAuth();
+  const q = useQuery({
+    queryKey: ["my-proposals", session?.token],
+    queryFn: () => api<Proposal[]>("/proposals/mine", { token: session!.token }),
+    enabled: !!session,
+  });
+  if (!session || !q.data?.length) return null;
+  return (
+    <section className="mt-6 flex flex-col gap-3">
+      <h2 className="section-title">내 공구 제안</h2>
+      <ul className="divide-y divide-line rounded-xl border border-line px-5">
+        {q.data.map((p) => (
+          <li key={p.id} className="flex flex-wrap items-center gap-4 py-4">
+            <div className="min-w-[200px] flex-1">
+              <strong className="text-[15px] font-medium">{p.name}</strong>
+              <p className="text-sm text-muted">
+                최대 {p.maxPrice.toLocaleString()}원 · 목표 {p.targetQty}개{p.rejectReason && ` · 거절 사유: ${p.rejectReason}`}
+              </p>
+            </div>
+            {p.groupId && (
+              <Link href={`/groups/${p.groupId}`} className="text-sm font-bold text-accent">
+                공구 #{p.groupId} 보기
+              </Link>
+            )}
+            <span className="rounded-full bg-[#F3F4F6] px-3 py-1 text-sm font-bold text-[#374151]">{STATUS_KO[p.status]}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
