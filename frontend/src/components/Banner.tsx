@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-const SLIDES = [
-  { kicker: "기획전", title: "겨울 캠핑 공구전", sub: "의자·랜턴·텀블러 최대 30% · 목표 인원이 차면 바로 출발", href: "/groups?cat=%EC%BA%A0%ED%95%91", bg: "#1F3A2E", fg: "#FFFFFF" },
-  { kicker: "판매자 특가", title: "판매자가 직접 연 공구", sub: "구매자 수수료 0원 · 결제 즉시 판매자 정산", href: "/groups?kind=listed", bg: "#FFE7DD", fg: "#111111" },
-  { kicker: "이번 주", title: "커피 원두 공구", sub: "산지 원두 1kg부터 · 인원 미달이면 전액 환불", href: "/groups?cat=%EC%8B%9D%ED%92%88", bg: "#F1E8DC", fg: "#111111" },
+type Slide = { kicker: string; kickerColor?: string; title: string; sub: string; href: string; cta: string; bg: string; fg: string };
+
+const SLIDES: Slide[] = [
+  { kicker: "기획전", title: "겨울 캠핑 공구전", sub: "의자·랜턴·텀블러 최대 30% · 목표 인원이 차면 바로 출발", href: "/groups?cat=%EC%BA%A0%ED%95%91", cta: "보러 가기", bg: "#1F3A2E", fg: "#FFFFFF" },
+  { kicker: "판매자 특가", title: "판매자가 직접 연 공구", sub: "구매자 수수료 0원 · 결제 즉시 판매자 정산", href: "/groups?kind=listed", cta: "보러 가기", bg: "#FFE7DD", fg: "#111111" },
+  { kicker: "이번 주", title: "커피 원두 공구", sub: "산지 원두 1kg부터 · 인원 미달이면 전액 환불", href: "/groups?cat=%EC%8B%9D%ED%92%88", cta: "보러 가기", bg: "#F1E8DC", fg: "#111111" },
+  { kicker: "써 보고 좋았던 상품", kickerColor: "#D9411E", title: "내가 직접 공구 열기", sub: "판매자 특가 상품이나 대형 쇼핑몰 상품으로", href: "/create", cta: "공구 열기", bg: "#FFF1EC", fg: "#111111" },
+  { kicker: "안심결제", kickerColor: "#0E7A4F", title: "돈은 사람에게 가지 않아요", sub: "참여금은 컨트랙트에, 결제는 등록된 판매자에게만", href: "/groups", cta: "공구 둘러보기", bg: "#EAF6EF", fg: "#111111" },
 ];
 
 const N = SLIDES.length;
@@ -69,7 +73,7 @@ export function Banner() {
   }, [playing, pos]);
 
   return (
-    <section aria-roledescription="carousel" aria-label="기획전 배너" className="grid gap-3 md:grid-cols-[2fr_1fr]">
+    <section aria-roledescription="carousel" aria-label="기획전 배너">
       <div className="relative min-h-[260px] overflow-hidden rounded-xl md:min-h-[340px]">
         {/* 슬라이드를 가로로 이어 붙이고, 트랙 전체를 옆으로 밀어서 넘긴다 */}
         <div
@@ -87,7 +91,9 @@ export function Banner() {
               className="flex min-h-[260px] w-full shrink-0 flex-col justify-end p-7 md:min-h-[340px] md:p-10"
               style={{ background: s.bg, color: s.fg }}
             >
-              <span className="text-sm font-bold opacity-80">{s.kicker}</span>
+              <span className="text-sm font-bold" style={s.kickerColor ? { color: s.kickerColor } : { opacity: 0.8 }}>
+                {s.kicker}
+              </span>
               {t === 1 ? (
                 <h1 className="mt-2 text-3xl font-extrabold tracking-tight md:text-[44px] md:leading-tight">{s.title}</h1>
               ) : (
@@ -99,7 +105,7 @@ export function Banner() {
                 tabIndex={t === pos ? 0 : -1}
                 className="mt-6 w-fit rounded-md bg-white/90 px-4 py-2.5 text-sm font-bold text-ink hover:bg-white"
               >
-                보러 가기
+                {s.cta}
               </Link>
             </div>
           ))}
@@ -117,18 +123,6 @@ export function Banner() {
           <button type="button" aria-label={playing ? "자동 넘김 멈춤" : "자동 넘김 시작"} className="px-1.5" onClick={() => setPlaying(!playing)}>
             {playing ? "❚❚" : "▶"}
           </button>
-        </div>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
-        <Link href="/create" className="flex flex-col justify-center rounded-xl bg-accent-tint p-6 hover:brightness-[0.98]">
-          <span className="text-xs font-bold text-accent">써 보고 좋았던 상품</span>
-          <strong className="mt-1 text-lg font-extrabold">내가 직접 공구 열기</strong>
-          <span className="mt-1 text-sm text-[#4A4A4A]">판매자 특가 상품이나 대형 쇼핑몰 상품으로</span>
-        </Link>
-        <div className="flex flex-col justify-center rounded-xl bg-safe-tint p-6">
-          <span className="text-xs font-bold text-safe">안심결제</span>
-          <strong className="mt-1 text-lg font-extrabold">돈은 사람에게 가지 않아요</strong>
-          <span className="mt-1 text-sm text-[#4A4A4A]">참여금은 컨트랙트에, 결제는 등록된 판매자에게만</span>
         </div>
       </div>
     </section>
