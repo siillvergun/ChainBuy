@@ -103,3 +103,19 @@ export function useMe(token: string | undefined) {
     refetchInterval: false,
   });
 }
+
+/** 이 지갑이 참여한 공구 (참여 수량 > 0). 헤더 배지와 마이페이지가 같이 쓴다 */
+export function useMyGroups(address: `0x${string}` | undefined) {
+  const { groups } = useGroups();
+  const reads = useReadContracts({
+    contracts: groups.map((g) => ({ ...cb, functionName: "getParticipant", args: [g.id, address!] }) as const),
+    query: { enabled: !!address && groups.length > 0 },
+  });
+  return useMemo(() => {
+    if (!reads.data) return [];
+    return groups.filter((_, i) => Number((reads.data[i]?.result as { qty?: number } | undefined)?.qty ?? 0) > 0);
+  }, [groups, reads.data]);
+}
+
+/** 아직 끝나지 않은 공구 (모집~배송 완료) */
+export const ONGOING = new Set(["OPEN", "PENDING_CHECK", "APPROVED", "PAID", "SHIPPED"]);

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { AccountMenu } from "./AccountMenu";
+import { IconButtons, UtilityLinks } from "./AccountMenu";
 
 const NAV = [
   { href: "/", label: "홈" },
@@ -26,16 +26,14 @@ export function Header() {
       </div>
       <header className="border-b border-line bg-white">
         <div className="mx-auto max-w-page px-4 md:px-6">
-          <div className="flex flex-wrap justify-end gap-4 pt-2.5 text-[13px] text-[#4A4A4A]">
-            <AccountMenu />
-          </div>
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-3 py-3">
+          <UtilityLinks />
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 md:gap-x-8">
             <Link href="/" className="text-[28px] font-extrabold tracking-tight text-ink">
               Chain<span className="text-accent">Buy</span>
             </Link>
             <form
               role="search"
-              className="flex h-[46px] min-w-0 max-w-[520px] flex-[1_1_280px] items-center rounded-md border-2 border-ink pl-3.5 pr-3"
+              className="order-last flex h-[46px] min-w-0 basis-full items-center rounded-md border-2 border-ink pl-3.5 pr-3 md:order-none md:max-w-[520px] md:flex-[1_1_280px] md:basis-auto"
               onSubmit={(e) => {
                 e.preventDefault();
                 router.push(`/groups?q=${encodeURIComponent(q)}`);
@@ -59,11 +57,7 @@ export function Header() {
                 </svg>
               </button>
             </form>
-            <div className="ml-auto flex gap-2.5">
-              <Link href="/create" className="btn-primary">
-                공동구매 열기
-              </Link>
-            </div>
+            <IconButtons />
           </div>
           <Suspense fallback={<NavLinks pathname={pathname} params={null} />}>
             <NavWithParams pathname={pathname} />
