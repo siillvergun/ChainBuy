@@ -1,6 +1,7 @@
 import { ethers, network } from "hardhat";
 import fs from "fs";
 import path from "path";
+import { execFileSync } from "child_process";
 
 /**
  * MockUSDC + ChainBuy 배포.
@@ -66,6 +67,11 @@ async function main() {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, `${network.name}.json`), JSON.stringify(out, null, 2));
   console.log(JSON.stringify(out, null, 2));
+
+  // 로컬 체인은 재시작할 때마다 주소가 새로 정해지므로 프론트의 컨트랙트 주소도 바로 갱신
+  if (network.name === "localhost") {
+    execFileSync("node", [path.join(__dirname, "..", "..", "frontend", "scripts", "sync-contracts.mjs")], { stdio: "inherit" });
+  }
 }
 
 main().catch((e) => {
