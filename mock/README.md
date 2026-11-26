@@ -15,8 +15,9 @@ API 문서: http://localhost:4100/docs
 | | `GET /shop/products/{id}` | AI가 읽는 상품 화면 |
 | | `PATCH /shop/api/products/{id}` | 데모: 가격 상승·품절 |
 | | `POST /shop/api/orders` | 카드 결제 주문 |
+| | `POST /shop/api/orders/{id}/cancel` | 데모 조작: 주문 취소 → 카드 환불 → 컨트랙트 `returnRefund` (PB-06) |
 | 카드 발급사 | `POST /card/api/cards` | 공구별 일회용 카드 (한도 = 체인 충전액) |
-| | `POST /card/api/cards/{id}/close` | 폐기 + 잔액을 컨트랙트 `returnRemainder`로 반환 |
+| | `POST /card/api/cards/{id}/close` | 폐기 + 잔액을 컨트랙트 `returnRemainder`로 반환 (유효 기간이 지나면 60초마다 자동 폐기) |
 | 택배사 | `POST /courier/api/shipments` | 운송장 생성 |
 | | `GET /courier/api/tracking/{no}` | 조회 (생성 후 `DELIVERY_SECONDS` 지나면 배송 완료) |
 | | `POST /courier/api/tracking/{no}/deliver` | 데모: 바로 배송 완료 |
