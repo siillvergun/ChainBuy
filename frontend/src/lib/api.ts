@@ -117,3 +117,11 @@ export type UserProfile = {
   /** 체인에 올리는 배송지 해시 (솔트 포함). 배송지가 없으면 null */
   recipientHash: `0x${string}` | null;
 };
+
+export type Activity = {
+  action: string;
+  message: string;
+  detail: Record<string, unknown> | null;
+  txHash: string | null;
+  createdAt: number;
+};

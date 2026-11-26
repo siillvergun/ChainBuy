@@ -128,3 +128,28 @@ class Like(Base):
     created_at: Mapped[int] = mapped_column(BigInteger)
 
     __table_args__ = (Index("likes_group", "group_id"),)
+
+
+class Shipment(Base):
+    """공구 배송 (운송장). 입점 상품은 판매자가 등록, 외부 상품은 에이전트가 주문 후 등록"""
+
+    __tablename__ = "shipments"
+    group_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tracking_no: Mapped[str] = mapped_column(String(40))
+    carrier: Mapped[str] = mapped_column(String(20), default="mock")
+    registered_by: Mapped[str] = mapped_column(String(42))  # 판매자 지갑 또는 'agent'
+    order_id: Mapped[str | None] = mapped_column(String(60))  # 외부 상품: 쇼핑몰 주문번호
+    created_at: Mapped[int] = mapped_column(BigInteger)
+
+
+class AgentLog(Base):
+    """에이전트 활동 기록 (담당자 확인·공구 진행 기록 표시용)"""
+
+    __tablename__ = "agent_logs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    group_id: Mapped[int] = mapped_column(Integer, index=True)
+    action: Mapped[str] = mapped_column(String(30))  # finalize | check | cancel | pay | fund_card | order | proof | shipped | fee | error
+    message: Mapped[str] = mapped_column(Text)
+    detail: Mapped[str | None] = mapped_column(Text)  # JSON (AI 확인 결과 등)
+    tx_hash: Mapped[str | None] = mapped_column(String(66))
+    created_at: Mapped[int] = mapped_column(BigInteger)

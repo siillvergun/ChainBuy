@@ -73,3 +73,14 @@ def onchain_group(group_id: int) -> dict | None:
         return None
     names = [c["name"] for c in outputs[0]["components"]]
     return {n: _hexify(v) for n, v in zip(names, g)}
+
+
+def group_count() -> int:
+    (n,), _ = call("groupCount")
+    return int(n)
+
+
+def participant(group_id: int, user: str) -> dict:
+    (p,), outputs = call("getParticipant", group_id, user)
+    names = [c["name"] for c in outputs[0]["components"]]
+    return {n: _hexify(v) for n, v in zip(names, p)}

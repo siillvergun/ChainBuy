@@ -15,7 +15,7 @@ from ..auth import AUTH, DB, REVIEWER, CurrentUser, issue_nonce, now_ms, verify_
 from ..chain import id_hash, is_reviewer, onchain_group, onchain_seller
 from ..config import ALLOWED_MALLS, CATEGORIES
 from ..errors import ApiError
-from ..models import Product, Proposal, Seller
+from ..models import AgentLog, Product, Proposal, Seller
 
 router = APIRouter(route_class=CommitRoute)
 
@@ -397,3 +397,18 @@ def admin_proposal_reject(proposal_id: str, body: ReasonIn, _: CurrentUser = REV
         raise ApiError(404, "대기 중인 제안이 아니에요.")
     pr.status, pr.reject_reason = "rejected", body.reason.strip()
     return {"ok": True}
+
+
+# ─────────────── 진행 기록 (에이전트 활동) ───────────────
+
+
+@router.get("/groups/{group_id}/activity")
+def group_activity(group_id: int, db: Session = DB):
+    """에이전트가 이 공구에 한 일 (상품 확인 결과·결제·주문·배송·수수료). 최신 순"""
+    import json as _json
+
+    rows = db.scalars(select(AgentLog).where(AgentLog.group_id == group_id).order_by(AgentLog.id.desc()).limit(50)).all()
+    return [
+        {"action": r.action, "message": r.message, "detail": _json.loads(r.detail) if r.detail else None, "txHash": r.tx_hash, "createdAt": r.created_at}
+        for r in rows
+    ]
