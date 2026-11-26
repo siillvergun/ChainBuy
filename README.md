@@ -52,6 +52,9 @@ cd backend/server && .venv/bin/pytest     # API 단위
 cd backend/smoke && npm run smoke         # API 스모크 (API 실행 중)
 ```
 
+PR과 main 푸시마다 GitHub Actions가 위 테스트와 프론트 lint·build를 모두 돌립니다 (`.github/workflows/ci.yml`).
+컨트랙트를 바꿨다면 `cd blockchain && npm run sync:abi`로 ABI 복사본도 갱신하세요.
+
 ## 배포
 
 [DEPLOY.md](DEPLOY.md) — Sepolia · Render · Vercel
