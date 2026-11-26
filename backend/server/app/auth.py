@@ -14,7 +14,8 @@ import jwt
 from eth_account import Account
 from eth_account.messages import encode_defunct
 from eth_utils import is_address, to_checksum_address
-from fastapi import Depends, Header
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from .chain import is_reviewer
@@ -72,9 +73,14 @@ class CurrentUser:
         self.expires_at = expires_at
 
 
-def current_user(authorization: str | None = Header(default=None)) -> CurrentUser:
+# Swagger(/docs)에 Authorize 버튼을 만들어 주는 Bearer 토큰 방식.
+# auto_error=False: 토큰이 없을 때 FastAPI 기본 403 대신 아래에서 한국어 401을 돌려주려고
+bearer = HTTPBearer(auto_error=False, description="POST /auth/verify 응답의 token")
+
+
+def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> CurrentUser:
     """Authorization: Bearer <JWT> 를 검증해서 지갑 주소를 꺼낸다"""
-    token = (authorization or "").removeprefix("Bearer ").strip()
+    token = credentials.credentials if credentials else ""
     if not token:
         raise ApiError(401, "지갑으로 로그인해 주세요.")
     try:

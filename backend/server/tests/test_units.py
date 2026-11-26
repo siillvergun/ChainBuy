@@ -4,6 +4,7 @@ import time
 
 import jwt
 import pytest
+from fastapi.security import HTTPAuthorizationCredentials
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
@@ -13,6 +14,11 @@ from app.config import settings
 from app.errors import ApiError
 from app.models import User
 from app.routers.core import check_mall_url
+
+
+def bearer(token: str) -> HTTPAuthorizationCredentials:
+    """Authorization: Bearer <token> 헤더를 HTTPBearer가 꺼낸 모양으로"""
+    return HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
 from app.routers.users import recipient_hash
 
 
@@ -31,11 +37,11 @@ def test_login_signature_recovers_wallet():
 def test_jwt_valid_expired_and_missing():
     s = settings()
     ok = jwt.encode({"sub": "0xabc", "exp": int(time.time()) + 60}, s.jwt_secret, algorithm="HS256")
-    assert current_user(f"Bearer {ok}").address == "0xabc"
+    assert current_user(bearer(ok)).address == "0xabc"
 
     old = jwt.encode({"sub": "0xabc", "exp": int(time.time()) - 1}, s.jwt_secret, algorithm="HS256")
     with pytest.raises(ApiError) as e:
-        current_user(f"Bearer {old}")
+        current_user(bearer(old))
     assert e.value.status == 401 and "만료" in e.value.message
 
     with pytest.raises(ApiError) as e:

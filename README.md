@@ -77,6 +77,13 @@ npm run dev
 
 http://localhost:3000/groups 에 공구 16개가 보이면 준비가 끝난 거예요. 안 보이면 새로고침하세요.
 
+API 문서(Swagger)는 http://localhost:4000/docs 예요. 로그인이 필요한 API는 아래 순서로 토큰을 넣고 호출합니다.
+1. 웹에서 지갑으로 로그인합니다.
+2. 개발자 도구 → Application → Local Storage에서 `chainbuy.session.<지갑 주소>`의 `token` 값을 복사합니다.
+3. Swagger 오른쪽 위 **Authorize**에 붙여 넣습니다.
+
+mock 서비스 문서는 http://localhost:4100/docs 예요.
+
 ### 4. MetaMask 설정 (처음 한 번)
 
 1. 네트워크를 추가합니다: 이름 `Hardhat`, RPC `http://127.0.0.1:8545`, 체인 ID `31337`, 통화 `ETH`.
@@ -135,7 +142,7 @@ rm -f ../mock/data.json
 ```bash
 cd blockchain && npm test                 # 컨트랙트
 cd backend/server && .venv/bin/pytest     # API 단위
-cd backend/smoke && npm run smoke         # API 스모크 (API 실행 중)
+cd backend/smoke && npm run smoke         # API 스모크 (API 실행 중, 빈 DB 기준 — 두 번째 실행부터는 이미 만든 데이터 때문에 일부 실패)
 ```
 
 PR과 main 푸시마다 GitHub Actions가 위 테스트와 프론트 lint·build를 모두 돌립니다 (`.github/workflows/ci.yml`).
