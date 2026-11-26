@@ -5,7 +5,7 @@ FastAPI + SQLAlchemy 2.0 + Alembic + PostgreSQL. 로그인은 지갑 서명 → 
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-createdb chainbuy                       # 로컬 PostgreSQL
+createdb chainbuy                       # 로컬 PostgreSQL (또는: docker compose up -d db 후 .env의 DATABASE_URL 변경)
 .venv/bin/alembic upgrade head          # 테이블 생성
 .venv/bin/uvicorn app.main:app --port 4000 --reload
 ```
