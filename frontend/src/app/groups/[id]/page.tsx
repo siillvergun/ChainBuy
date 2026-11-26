@@ -4,6 +4,8 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { keccak256, toBytes } from "viem";
 import { useAccount, useReadContracts } from "wagmi";
+import { useQuery } from "@tanstack/react-query";
+import { api, Activity } from "@/lib/api";
 import { useGroup, useMe, useMyParticipation, useSponsorTags } from "@/lib/hooks";
 import { useAuth } from "@/components/AuthProvider";
 import { SponsorBadge } from "@/components/SponsorBadge";
@@ -225,7 +227,31 @@ function Timeline({ g }: { g: GroupView }) {
           );
         })}
       </ol>
+      <ActivityLog groupId={Number(g.id)} />
     </section>
+  );
+}
+
+/** 에이전트 진행 기록 (상품 확인·결제·주문·배송·수수료) */
+function ActivityLog({ groupId }: { groupId: number }) {
+  const q = useQuery({ queryKey: ["activity", groupId], queryFn: () => api<Activity[]>(`/groups/${groupId}/activity`), retry: 1 });
+  const rows = (q.data ?? []).filter((a) => a.action !== "error");
+  if (!rows.length) return null;
+  return (
+    <div className="mt-2 border-t border-line pt-5">
+      <h3 className="mb-3 text-[15px] font-bold">진행 기록</h3>
+      <ul className="flex flex-col gap-2.5 text-sm">
+        {rows.slice(0, 10).map((a, i) => (
+          <li key={i} className="flex flex-col gap-0.5">
+            <span className="text-[#374151]">{a.message}</span>
+            <span className="text-xs text-muted">
+              {new Date(a.createdAt).toLocaleString("ko-KR")}
+              {a.txHash && <code className="ml-2 break-all">{a.txHash.slice(0, 18)}…</code>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

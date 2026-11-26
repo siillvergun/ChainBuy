@@ -12,6 +12,7 @@ import { useTx } from "@/lib/useTx";
 import { useAuth } from "@/components/AuthProvider";
 import { LoginGate } from "@/components/LoginGate";
 import { Notice } from "@/components/Field";
+import { PaymentChecks } from "@/components/PaymentChecks";
 
 /**
  * 담당자 화면 (ADM-01, ADM-02)
@@ -31,7 +32,7 @@ export default function AdminPage() {
 
 function AdminHome() {
   const { session } = useAuth();
-  const [tab, setTab] = useState<"sellers" | "proposals">("sellers");
+  const [tab, setTab] = useState<"checks" | "sellers" | "proposals">("checks");
   if (!session?.isReviewer) return <Notice tone="error">담당자(REVIEWER 역할) 지갑으로 로그인해야 볼 수 있어요.</Notice>;
 
   return (
@@ -39,6 +40,7 @@ function AdminHome() {
       <div role="tablist" className="flex gap-6 border-b border-line">
         {(
           [
+            ["checks", "결제 승인"],
             ["sellers", "판매자 입점 신청"],
             ["proposals", "외부 상품 공구 제안"],
           ] as const
@@ -55,7 +57,7 @@ function AdminHome() {
           </button>
         ))}
       </div>
-      {tab === "sellers" ? <Sellers token={session.token} /> : <Proposals token={session.token} />}
+      {tab === "checks" ? <PaymentChecks /> : tab === "sellers" ? <Sellers token={session.token} /> : <Proposals token={session.token} />}
     </>
   );
 }

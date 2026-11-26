@@ -27,6 +27,16 @@ class Settings(BaseSettings):
     # 개발용 가짜 OAuth (배포 시 false)
     enable_mock_oauth: bool = True
 
+    # AI 에이전트 (python -m app.agent)
+    # AGENT 역할 지갑 키. 기본값은 hardhat 테스트 계정 #2 — 공개된 테스트 키라 로컬 전용
+    agent_key: str = "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
+    agent_interval_seconds: int = 10
+    mock_url: str = "http://localhost:4100"  # mock 쇼핑몰·카드 발급사·택배사
+    # LLM으로 상품 화면 읽기 (없으면 규칙 기반 추출)
+    llm_api_key: str = ""
+    llm_model: str = "claude-sonnet-5-5"
+    llm_api_url: str = "https://api.anthropic.com/v1/messages"
+
     google_client_id: str = ""
     google_client_secret: str = ""
     instagram_client_id: str = ""
