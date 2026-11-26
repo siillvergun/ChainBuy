@@ -142,7 +142,7 @@ function ApprovedSeller({ seller }: { seller: Seller }) {
           <ul className="divide-y divide-line rounded-xl border border-line px-5">
             {myGroups.map((g) => (
               <li key={String(g.id)}>
-                <Link href={`/groups/${g.id}`} className="flex flex-wrap items-center gap-4 py-4">
+                <Link href={`/seller/groups/${g.id}`} className="flex flex-wrap items-center gap-4 py-4">
                   <span className="min-w-[200px] flex-1 font-medium">{g.product?.name ?? `공구 #${g.id}`}</span>
                   <span className="text-sm text-muted">
                     {g.totalQty}/{g.targetQty}개 · {won(g.maxPrice)}

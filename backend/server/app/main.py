@@ -16,7 +16,7 @@ from .config import CATALOG_PATH, settings
 from .db import SessionLocal
 from .errors import install as install_errors
 from .models import Product, Seller
-from .routers import core, influencers, users
+from .routers import core, influencers, seller_orders, users
 
 # 데모 판매자 지갑 = hardhat 계정 #4 (blockchain/scripts/deploy.ts 와 같다)
 DEMO_SELLER_WALLET = "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"
@@ -55,3 +55,4 @@ install_errors(app)
 app.include_router(core.router)
 app.include_router(influencers.router)
 app.include_router(users.router)
+app.include_router(seller_orders.router)
