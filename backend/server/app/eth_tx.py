@@ -7,7 +7,7 @@ from eth_abi import decode, encode
 from eth_account import Account
 from eth_utils import keccak
 
-from .config import chainbuy_address, settings
+from .config import chainbuy_address, from_block, settings
 
 
 def rpc(method: str, params: list):
@@ -53,7 +53,7 @@ def participants(group_id: int) -> list[str]:
     """Deposited 이벤트로 이 공구에 참여한 지갑 목록 (참여 취소한 사람도 포함될 수 있어 qty로 다시 확인)"""
     logs = rpc(
         "eth_getLogs",
-        [{"address": chainbuy_address(), "fromBlock": "0x0", "toBlock": "latest", "topics": [DEPOSITED_TOPIC, "0x" + encode(["uint256"], [group_id]).hex()]}],
+        [{"address": chainbuy_address(), "fromBlock": hex(from_block()), "toBlock": "latest", "topics": [DEPOSITED_TOPIC, "0x" + encode(["uint256"], [group_id]).hex()]}],
     )
     seen: list[str] = []
     for lg in logs:
