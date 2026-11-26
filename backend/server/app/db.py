@@ -15,7 +15,15 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .config import settings
 
-engine = create_engine(settings().database_url, pool_pre_ping=True)
+def _url(raw: str) -> str:
+    """호스팅 업체가 주는 postgres:// 주소를 psycopg 드라이버 주소로 맞춘다"""
+    for prefix in ("postgres://", "postgresql://"):
+        if raw.startswith(prefix):
+            return "postgresql+psycopg://" + raw[len(prefix):]
+    return raw
+
+
+engine = create_engine(_url(settings().database_url), pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=True, expire_on_commit=False)
 
 

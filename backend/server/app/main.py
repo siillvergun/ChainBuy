@@ -46,6 +46,12 @@ def seed_catalog() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     seed_catalog()
+    if settings().run_agent_in_api:
+        import threading
+
+        from .agent.__main__ import main as agent_main
+
+        threading.Thread(target=agent_main, name="agent", daemon=True).start()
     yield
 
 

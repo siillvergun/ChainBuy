@@ -1,0 +1,58 @@
+# Render 블루프린트: API(+에이전트) · mock 서비스 · PostgreSQL
+# 프론트엔드는 Vercel에 올린다 (DEPLOY.md 참고). sync: false 인 값은 Render 화면에서 직접 넣는다.
+databases:
+  - name: chainbuy-db
+    plan: free
+    databaseName: chainbuy
+    user: chainbuy
+
+services:
+  - type: web
+    name: chainbuy-api
+    runtime: docker
+    rootDir: backend/server
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: chainbuy-db, property: connectionString }
+      - key: RUN_AGENT_IN_API          # 무료 플랜: 워커 대신 API 안에서 에이전트 실행
+        value: "true"
+      - key: ENABLE_MOCK_OAUTH
+        value: "false"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: RPC_URL                   # Sepolia RPC (Alchemy·Infura)
+        sync: false
+      - key: CHAINBUY_ADDRESS          # blockchain/deployments/sepolia.json
+        sync: false
+      - key: CHAINBUY_FROM_BLOCK       # 같은 파일의 deployBlock
+        sync: false
+      - key: AGENT_KEY                 # AGENT 역할 지갑 개인키 (테스트넷 전용)
+        sync: false
+      - key: WEB_ORIGIN                # Vercel 주소 (https://...vercel.app)
+        sync: false
+      - key: API_PUBLIC_URL            # 이 서비스 주소 (https://chainbuy-api.onrender.com)
+        sync: false
+      - key: MOCK_URL                  # chainbuy-mock 주소
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+
+  - type: web
+    name: chainbuy-mock
+    runtime: docker
+    rootDir: mock
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: RPC_URL
+        sync: false
+      - key: CHAINBUY_ADDRESS
+        sync: false
+      - key: TOKEN_ADDRESS             # MockUSDC 주소
+        sync: false
+      - key: CARD_ISSUER_KEY           # 카드 발급사 지갑 개인키 (CARD_ISSUER_ADDRESS와 같은 지갑)
+        sync: false
+      - key: PUBLIC_URL
+        sync: false

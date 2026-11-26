@@ -23,7 +23,9 @@ from app.config import settings
 from app.db import Base
 from app import models  # noqa: F401  (테이블 등록)
 
-config.set_main_option("sqlalchemy.url", settings().database_url)
+from app.db import _url
+
+config.set_main_option("sqlalchemy.url", _url(settings().database_url))
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
