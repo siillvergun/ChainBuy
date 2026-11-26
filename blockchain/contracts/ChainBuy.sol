@@ -29,6 +29,8 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
     uint16 public constant MAX_FEE_BPS = 1_000; // 10%
     uint64 public constant APPROVAL_WINDOW = 7 days;
     uint64 public constant DISPUTE_WINDOW = 7 days;
+    /// @notice 경로 B: 카드 충전 후 이 기간 안에 잔액이 반환되지 않으면 누구나 정산할 수 있다
+    uint64 public constant CARD_RETURN_WINDOW = 3 days;
 
     // ─────────────────────────────── 타입 ───────────────────────────────
 
@@ -121,6 +123,10 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
     mapping(uint256 => Group) private _groups;
     mapping(uint256 => mapping(address => Participant)) private _participants;
     mapping(bytes32 => bool) public usedOrderHash;
+    /// @notice 참여자별 누적 환불액. 경로 B에서 쇼핑몰 환불이 나중에 들어오면 차액을 더 받을 수 있다
+    mapping(uint256 => mapping(address => uint256)) public refundedAmount;
+    /// @notice 결제(경로 A 지급 · 경로 B 카드 충전) 시각
+    mapping(uint256 => uint64) public paidAt;
 
     // ─────────────────────────────── 이벤트 ───────────────────────────────
 
@@ -148,6 +154,8 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
     event Paid(uint256 indexed id, address payee, uint256 amount, uint256 feeHeld);
     event CardFunded(uint256 indexed id, address fundingAddress, uint256 amount);
     event RemainderReturned(uint256 indexed id, uint256 amount, uint256 actualGross);
+    event CardSettledByTimeout(uint256 indexed id, uint256 actualGross);
+    event OrderRefundReturned(uint256 indexed id, uint256 amount, uint256 actualGross);
     event OrderProofSubmitted(uint256 indexed id, bytes32 orderHash);
     event Shipped(uint256 indexed id, uint64 shippedAt);
     event Refunded(uint256 indexed id, address indexed user, uint256 amount);
@@ -181,6 +189,7 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
     error DisputeWindowClosed();
     error FeeNotReleasable();
     error Unauthorized();
+    error ReturnWindowOpen();
 
     // ─────────────────────────────── 생성자 ───────────────────────────────
 
@@ -395,6 +404,7 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
         uint256 feeHeld = _listedFeePerUnit(g) * g.totalQty;
         g.actualGross = gross;
         g.status = Status.PAID;
+        paidAt[id] = uint64(block.timestamp);
 
         token.safeTransfer(g.payee, gross - feeHeld);
         emit Paid(id, g.payee, gross - feeHeld, feeHeld);
@@ -409,6 +419,7 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
 
         g.cardFunded = amount;
         g.status = Status.PAID;
+        paidAt[id] = uint64(block.timestamp);
 
         token.safeTransfer(g.payee, amount);
         emit CardFunded(id, g.payee, amount);
@@ -433,6 +444,42 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
 
         if (amount > 0) token.safeTransferFrom(msg.sender, address(this), amount);
         emit RemainderReturned(id, amount, g.actualGross);
+    }
+
+    /// @notice 경로 B: 충전 후 CARD_RETURN_WINDOW가 지나도 잔액 반환이 없으면 누구나 호출.
+    ///         충전액 전부를 결제액으로 보고 확정해, 배송·수수료 단계가 멈추지 않게 한다.
+    /// @dev 나중에 카드 발급사가 돈을 돌려주면 returnRefund로 받아 참여자에게 추가 환불된다.
+    function settleCardTimeout(uint256 id) external {
+        Group storage g = _groups[id];
+        if (g.kind != Kind.EXTERNAL) revert WrongKind();
+        if (g.status != Status.PAID) revert WrongStatus(g.status);
+        if (g.remainderReturned) revert RemainderPending();
+        if (block.timestamp <= paidAt[id] + CARD_RETURN_WINDOW) revert ReturnWindowOpen();
+
+        g.remainderReturned = true;
+        g.actualGross = g.cardFunded;
+        emit CardSettledByTimeout(id, g.actualGross);
+    }
+
+    /// @notice 경로 B: 쇼핑몰 주문 취소 등으로 카드에 들어온 환불을 컨트랙트로 반환 (PB-06).
+    ///         잔액 반환(또는 타임아웃 정산) 뒤, 배송 완료 전까지만. 실제 결제액이 줄어 참여자 환불이 늘어난다.
+    /// @dev 결제액이 0이 되면 공구는 취소되고 참여자는 (이미 받은 환불을 뺀) 전액을 받는다.
+    function returnRefund(uint256 id, uint256 amount) external nonReentrant {
+        Group storage g = _groups[id];
+        if (g.kind != Kind.EXTERNAL) revert WrongKind();
+        if (g.status != Status.PAID) revert WrongStatus(g.status);
+        if (msg.sender != g.payee) revert NotPayee();
+        if (!g.remainderReturned) revert RemainderPending();
+        if (amount == 0 || amount > g.actualGross) revert OverLimit();
+
+        g.actualGross -= amount;
+        if (g.actualGross == 0) {
+            g.status = Status.CANCELLED;
+            emit Cancelled(id);
+        }
+
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        emit OrderRefundReturned(id, amount, g.actualGross);
     }
 
     // ─────────────────────────────── 주문 증거·배송 ───────────────────────────────
@@ -466,20 +513,25 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
         Group storage g = _groups[id];
         Participant storage p = _participants[id][msg.sender];
         if (p.qty == 0) revert NotParticipant();
-        if (p.refunded) revert AlreadyRefunded();
 
-        uint256 amount;
+        uint256 entitled;
         if (g.status == Status.FAILED || g.status == Status.CANCELLED) {
-            amount = p.deposited;
+            entitled = p.deposited;
         } else if (g.status == Status.PAID || g.status == Status.SHIPPED || g.status == Status.COMPLETED) {
             if (g.kind == Kind.EXTERNAL && !g.remainderReturned) revert RemainderPending();
-            amount = p.deposited - _userGross(g, p) - _userFeeFromDeposit(g, p);
+            entitled = p.deposited - _userGross(g, p) - _userFeeFromDeposit(g, p);
         } else {
             revert WrongStatus(g.status);
         }
-        if (amount == 0) revert NothingToRefund();
+        // 이미 받은 만큼은 빼고 준다 (쇼핑몰 환불 반환으로 받을 몫이 늘어날 수 있음)
+        uint256 amount = entitled - refundedAmount[id][msg.sender];
+        if (amount == 0) {
+            if (p.refunded) revert AlreadyRefunded();
+            revert NothingToRefund();
+        }
 
         p.refunded = true;
+        refundedAmount[id][msg.sender] += amount;
         token.safeTransfer(msg.sender, amount);
         emit Refunded(id, msg.sender, amount);
     }
@@ -600,13 +652,15 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
     function refundableAmount(uint256 id, address user) external view returns (uint256) {
         Group storage g = _groups[id];
         Participant storage p = _participants[id][user];
-        if (p.qty == 0 || p.refunded) return 0;
-        if (g.status == Status.FAILED || g.status == Status.CANCELLED) return p.deposited;
-        if (g.status == Status.PAID || g.status == Status.SHIPPED || g.status == Status.COMPLETED) {
+        if (p.qty == 0) return 0;
+        uint256 entitled;
+        if (g.status == Status.FAILED || g.status == Status.CANCELLED) {
+            entitled = p.deposited;
+        } else if (g.status == Status.PAID || g.status == Status.SHIPPED || g.status == Status.COMPLETED) {
             if (g.kind == Kind.EXTERNAL && !g.remainderReturned) return 0;
-            return p.deposited - _userGross(g, p) - _userFeeFromDeposit(g, p);
+            entitled = p.deposited - _userGross(g, p) - _userFeeFromDeposit(g, p);
         }
-        return 0;
+        return entitled - refundedAmount[id][user];
     }
 
     /// @notice 참여자 몫의 수수료 (결제 전에는 0).

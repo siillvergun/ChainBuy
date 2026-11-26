@@ -158,6 +158,11 @@ export const chainBuyAbi = [
     "type": "error"
   },
   {
+    "inputs": [],
+    "name": "ReturnWindowOpen",
+    "type": "error"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -238,6 +243,25 @@ export const chainBuyAbi = [
       }
     ],
     "name": "CardFunded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "actualGross",
+        "type": "uint256"
+      }
+    ],
+    "name": "CardSettledByTimeout",
     "type": "event"
   },
   {
@@ -551,6 +575,31 @@ export const chainBuyAbi = [
       },
       {
         "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "actualGross",
+        "type": "uint256"
+      }
+    ],
+    "name": "OrderRefundReturned",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
         "internalType": "address",
         "name": "payee",
         "type": "address"
@@ -844,6 +893,19 @@ export const chainBuyAbi = [
         "internalType": "uint16",
         "name": "",
         "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "CARD_RETURN_WINDOW",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
       }
     ],
     "stateMutability": "view",
@@ -1492,6 +1554,25 @@ export const chainBuyAbi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "paidAt",
+    "outputs": [
+      {
+        "internalType": "uint64",
+        "name": "",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "pause",
     "outputs": [],
@@ -1551,6 +1632,30 @@ export const chainBuyAbi = [
       }
     ],
     "name": "refundableAmount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "refundedAmount",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1629,6 +1734,24 @@ export const chainBuyAbi = [
       }
     ],
     "name": "resolveDispute",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "returnRefund",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1761,6 +1884,19 @@ export const chainBuyAbi = [
       }
     ],
     "name": "setSeller",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "name": "settleCardTimeout",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

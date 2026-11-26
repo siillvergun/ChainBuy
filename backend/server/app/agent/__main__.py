@@ -24,7 +24,7 @@ from eth_utils import keccak
 from sqlalchemy import select
 
 from ..auth import now_ms
-from ..chain import group_count, id_hash, onchain_group, participant
+from ..chain import call, group_count, id_hash, onchain_group, participant
 from ..config import settings
 from ..db import SessionLocal
 from ..eth_tx import calldata, participants, send
@@ -33,6 +33,7 @@ from .reader import read_product
 
 UNIT = 10**6  # 토큰 소수점 6자리 (화면 단위 원)
 DAY_MS = 86_400_000
+CARD_RETURN_WINDOW_MS = 3 * DAY_MS  # 컨트랙트 CARD_RETURN_WINDOW와 같음
 STATUS = ["OPEN", "FAILED", "PENDING_CHECK", "CANCELLED", "APPROVED", "PAID", "SHIPPED", "COMPLETED"]
 
 
@@ -174,6 +175,13 @@ def buy_with_card(gid: int, g: dict) -> None:
 
 def on_paid(gid: int, g: dict) -> None:
     if g["kind"] == 1 and not g["remainderReturned"]:
+        (paid_at,), _ = call("paidAt", gid)
+        paid_at_ms = paid_at * 1000
+        if paid_at_ms + CARD_RETURN_WINDOW_MS < time.time() * 1000:
+            # 카드 발급사가 3일 넘게 잔액을 안 돌려줌 → 충전액 전부를 결제액으로 확정하고 다음 단계로
+            h = tx("settleCardTimeout", ["uint256"], [gid])
+            log(gid, "timeout", "카드 잔액 반환이 3일 넘게 없어 충전액 전부를 결제액으로 확정", tx=h)
+            return
         buy_with_card(gid, g)
         return
     with SessionLocal() as db:

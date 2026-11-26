@@ -106,6 +106,30 @@ def order(body: OrderIn):
     approval = card_issuer.authorize(body.card.number, body.card.cvc, body.card.exp, amount, settings().merchant_id)
     p["stock"] -= body.qty
     oid = f"ORD-{int(time.time())}-{secrets.token_hex(3).upper()}"
-    store.table("orders")[oid] = {"orderId": oid, "productId": p["id"], "qty": body.qty, "amount": amount, "approvalId": approval["approvalId"], "createdAt": int(time.time() * 1000)}
+    store.table("orders")[oid] = {
+        "orderId": oid,
+        "productId": p["id"],
+        "qty": body.qty,
+        "amount": amount,
+        "approvalId": approval["approvalId"],
+        "cardId": approval["cardId"],
+        "status": "ordered",  # ordered | cancelled
+        "createdAt": int(time.time() * 1000),
+    }
     store.save()
     return store.table("orders")[oid]
+
+
+@router.post("/api/orders/{oid}/cancel")
+def cancel_order(oid: str):
+    """데모 조작: 주문 취소 → 결제 금액을 카드로 환불 → 카드 발급사가 컨트랙트로 돌려준다 (PB-06)"""
+    o = store.table("orders").get(oid)
+    if not o:
+        raise HTTPException(404, "주문이 없어요")
+    if o.get("status") == "cancelled":
+        raise HTTPException(409, "이미 취소된 주문이에요")
+    card_issuer.refund_to_card(o["cardId"], o["amount"])
+    o["status"] = "cancelled"
+    product(o["productId"])["stock"] += o["qty"]
+    store.save()
+    return o
