@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.routing import APIRoute
 from sqlalchemy import select
 
 from .auth import now_ms
@@ -55,10 +56,49 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="ChainBuy API", version="0.2.0", lifespan=lifespan)
+API_DESCRIPTION = """
+스마트 컨트랙트 에스크로 공동구매 ChainBuy의 API.
+
+**로그인이 필요한 API 쓰는 법**
+1. 웹(http://localhost:3000)에서 지갑으로 로그인
+2. 브라우저 개발자 도구 → Application → Local Storage → `chainbuy.session.<지갑 주소>`의 `token` 값 복사
+3. 오른쪽 위 **Authorize**에 붙여 넣기 (`Bearer`는 빼고 토큰만)
+"""
+
+# Swagger에서 API를 묶어 보여 줄 영역. 주소가 이 접두어로 시작하면 해당 태그를 붙인다 (위에서부터 먼저 맞는 것)
+TAGS_BY_PATH_PREFIX = [
+    ("/auth", "인증"),
+    ("/admin", "담당자"),
+    ("/seller/", "판매자 주문"),
+    ("/sellers", "판매자"),
+    ("/products", "상품"),
+    ("/proposals", "외부 상품 제안"),
+    ("/influencers", "인플루언서"),
+    ("/tags", "인플루언서"),
+    ("/groups/{group_id}/tags", "인플루언서"),
+    ("/oauth", "SNS 연결"),
+    ("/users", "사용자"),
+    ("/likes", "찜"),
+    ("/groups", "공구"),
+    ("/health", "상태"),
+]
+
+
+def tag_routes_by_path(app: FastAPI) -> None:
+    for route in app.routes:
+        if not isinstance(route, APIRoute) or route.tags:
+            continue
+        for prefix, tag in TAGS_BY_PATH_PREFIX:
+            if route.path.startswith(prefix):
+                route.tags = [tag]
+                break
+
+
+app = FastAPI(title="ChainBuy API", version="0.2.0", description=API_DESCRIPTION, lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=[settings().web_origin], allow_methods=["*"], allow_headers=["*"])
 install_errors(app)
 app.include_router(core.router)
 app.include_router(influencers.router)
 app.include_router(users.router)
 app.include_router(seller_orders.router)
+tag_routes_by_path(app)
