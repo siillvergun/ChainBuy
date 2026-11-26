@@ -18,31 +18,117 @@
 
 ## 로컬 실행
 
-필요: Node 20+, Python 3.12+, PostgreSQL(또는 `docker compose up -d`)
+필요: Node 20+, Python 3.12+, PostgreSQL, MetaMask(브라우저 확장)
+
+터미널 5개를 열어 순서대로 실행합니다. 처음 한 번만 하는 설치는 `(처음 한 번)`으로 표시했어요.
+
+### 1. 체인 (터미널 1)
 
 ```bash
-# 1) 체인
-cd blockchain && npm install && npm run node            # 터미널 1
-npm run deploy:local && npm run seed:local               # 터미널 2
-
-# 2) API
-cd backend/server && python -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env && createdb chainbuy
-.venv/bin/alembic upgrade head && .venv/bin/uvicorn app.main:app --port 4000
-
-# 3) mock 서비스 (경로 B · 택배)
-cd mock && python -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/uvicorn app.main:app --port 4100
-
-# 4) AI 에이전트
-cd backend/server && .venv/bin/python -m app.agent
-
-# 5) 웹
-cd frontend && npm install && npm run dev                # http://localhost:3000
+cd blockchain
+npm install                     # (처음 한 번)
+npm run node                    # 로컬 체인 실행. 켜 둔 채로 둔다
 ```
 
-MetaMask에 Hardhat 네트워크(`http://127.0.0.1:8545`, chainId 31337)를 추가하고 Hardhat 테스트 계정을 가져와 쓰세요.
-#1이 담당자(REVIEWER), #4가 데모 판매자입니다.
+화면에 테스트 계정 20개의 주소와 Private Key가 출력됩니다. 4단계에서 씁니다.
+
+### 2. 컨트랙트 배포 + 데모 공구 (터미널 2)
+
+```bash
+cd blockchain
+npm run deploy:local            # 컨트랙트 배포 → 프론트 주소 자동 갱신
+npm run seed:local              # 데모 공구 16개 + 모든 계정에 테스트 토큰 지급
+```
+
+### 3. 서버들
+
+DB는 둘 중 하나를 고르세요.
+- PostgreSQL을 설치해 쓰는 경우: `createdb chainbuy`
+- Docker를 쓰는 경우: `docker compose up -d db`. 그리고 `backend/server/.env`의 `DATABASE_URL`을 주석에 있는 값으로 바꿉니다.
+
+```bash
+# 터미널 2 — API (http://localhost:4000)
+cd backend/server
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # (처음 한 번)
+cp .env.example .env                                                  # (처음 한 번)
+.venv/bin/alembic upgrade head
+.venv/bin/uvicorn app.main:app --port 4000
+```
+
+```bash
+# 터미널 3 — mock 쇼핑몰·카드 발급사·택배사 (http://localhost:4100/docs)
+cd mock
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # (처음 한 번)
+.venv/bin/uvicorn app.main:app --port 4100
+```
+
+```bash
+# 터미널 4 — AI 구매 에이전트 (10초마다 체인을 보고 다음 단계를 진행)
+cd backend/server
+.venv/bin/python -m app.agent
+```
+
+```bash
+# 터미널 5 — 웹 (http://localhost:3000)
+cd frontend
+npm install                     # (처음 한 번)
+npm run dev
+```
+
+http://localhost:3000/groups 에 공구 16개가 보이면 준비가 끝난 거예요. 안 보이면 새로고침하세요.
+
+### 4. MetaMask 설정 (처음 한 번)
+
+1. 네트워크를 추가합니다: 이름 `Hardhat`, RPC `http://127.0.0.1:8545`, 체인 ID `31337`, 통화 `ETH`.
+2. "계정 가져오기"로 1단계 화면에 나온 Private Key를 붙여 넣습니다. 역할별로 아래 계정을 쓰세요.
+
+| 계정 | 역할 | 할 수 있는 것 |
+| --- | --- | --- |
+| #1 | 담당자 (REVIEWER) | `/admin`: 결제 승인, 판매자 입점 승인, 외부 상품 제안 승인 |
+| #4 | 데모 판매자 | `/seller`: 상품 등록, 공구 열기, 운송장 등록 |
+| #6, #7 | 일반 참여자 | 공구 참여, 환불 받기, 수령 확인, 외부 상품 제안 |
+
+#0, #2, #3, #5는 배포자, 에이전트, 수수료 지갑, 카드 발급사가 쓰는 계정이라 테스트에는 쓰지 마세요.
+테스트 계정 키는 누구나 아는 공개 키라 로컬에서만 쓰고, 실제 돈을 넣으면 안 돼요.
+
+### 5. 해 볼 만한 시나리오
+
+**경로 A: 입점 판매자 공구**
+
+1. 참여자 #6으로 로그인합니다.
+2. "에티오피아 예가체프 원두 1kg"(17/20)에 3개 참여해 목표를 채웁니다.
+3. 에이전트가 마감 처리와 가격 확인을 합니다. 10~20초 기다리세요.
+4. 담당자 #1로 바꿔 `/admin` → "결제 승인"에서 승인합니다. 에이전트가 판매자에게 결제합니다.
+5. 판매자 #4로 바꿔 `/seller`에서 해당 공구의 운송장을 등록합니다. 2분 뒤 mock 택배사가 배송 완료로 바꿉니다.
+6. 참여자 #6으로 돌아가 공구 화면에서 수령을 확인합니다.
+
+**경로 B: 외부 쇼핑몰 링크 공구**
+
+1. 참여자 #6으로 로그인합니다.
+2. `/create`에서 쿠팡 링크(예: `https://www.coupang.com/vp/products/123`)로 공구를 제안합니다.
+3. 담당자 #1로 바꿔 `/admin` → "외부 상품 공구 제안"에서 승인합니다. 이때 체인에 공구가 만들어집니다.
+4. 여러 참여자 계정으로 목표 수량을 채웁니다.
+5. "결제 승인"에서 승인합니다.
+6. 에이전트가 카드 충전 → 주문 → 남은 금액 반환까지 진행합니다.
+7. 참여자 화면에 "환불 받기"(차액)가 생깁니다.
+8. 에이전트가 하는 일은 터미널 4에서 볼 수 있어요.
+
+**데모 조작**
+
+`http://localhost:4100/docs`에서 직접 호출합니다. 가격 올리기와 품절은 `PATCH /shop/api/products/{id}`, 주문 취소 환불은 `POST /shop/api/orders/{id}/cancel`, 즉시 배송 완료는 `POST /courier/api/tracking/{no}/deliver`예요.
+
+### 처음부터 다시 하기
+
+로컬 체인은 끄면 데이터가 모두 사라집니다. 체인을 다시 켰다면 아래를 모두 해 주세요.
+
+```bash
+cd blockchain && npm run deploy:local && npm run seed:local
+dropdb chainbuy && createdb chainbuy && (cd ../backend/server && .venv/bin/alembic upgrade head)   # Docker면: docker compose down -v && docker compose up -d db
+rm -f ../mock/data.json
+```
+
+- API, mock, 에이전트를 다시 켜고, 웹은 새로고침합니다.
+- MetaMask는 설정 → 고급 → "활동 탭 데이터 지우기"를 계정마다 눌러야 합니다. 안 하면 트랜잭션이 nonce 오류로 실패해요.
 
 ## 테스트
 
