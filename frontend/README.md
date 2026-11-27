@@ -44,4 +44,4 @@ cd frontend && npm run dev                            # 3. http://localhost:3000
 | `NEXT_PUBLIC_CHAIN` | `sepolia` 로 두면 Sepolia 사용 |
 | `NEXT_PUBLIC_SEPOLIA_RPC` | Sepolia RPC 주소 |
 | `NEXT_PUBLIC_CHAINBUY_ADDRESS` | ChainBuy 컨트랙트 주소 |
-| `NEXT_PUBLIC_USDC_ADDRESS` | MockUSDC 주소 |
+| `NEXT_PUBLIC_TOKEN_ADDRESS` | ChainBuyUSD 주소 |

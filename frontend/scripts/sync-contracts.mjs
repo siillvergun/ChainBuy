@@ -9,7 +9,7 @@ const chain = path.join(here, "..", "..", "blockchain");
 const read = (p) => JSON.parse(fs.readFileSync(path.join(chain, p), "utf8"));
 
 const chainBuy = read("artifacts/contracts/ChainBuy.sol/ChainBuy.json").abi;
-const usdc = read("artifacts/contracts/MockUSDC.sol/MockUSDC.json").abi;
+const token = read("artifacts/contracts/ChainBuyUSD.sol/ChainBuyUSD.json").abi;
 
 let local = null;
 const dep = path.join(chain, "deployments", "localhost.json");
@@ -18,12 +18,12 @@ if (fs.existsSync(dep)) local = JSON.parse(fs.readFileSync(dep, "utf8"));
 const out = `// 자동 생성 파일 — scripts/sync-contracts.mjs 로 다시 만든다. 직접 수정하지 말 것.
 export const chainBuyAbi = ${JSON.stringify(chainBuy, null, 2)} as const;
 
-export const mockUsdcAbi = ${JSON.stringify(usdc, null, 2)} as const;
+export const chainBuyUsdAbi = ${JSON.stringify(token, null, 2)} as const;
 
 export const localDeployment = ${JSON.stringify(local, null, 2)} as {
   chainId: number;
   ChainBuy: \`0x\${string}\`;
-  MockUSDC: \`0x\${string}\`;
+  ChainBuyUSD: \`0x\${string}\`;
   feeBps: number;
 } | null;
 `;

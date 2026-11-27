@@ -66,13 +66,13 @@ describe("05. 공격 시나리오 · 관리자 · 긴급 정지", () => {
     });
 
     it("남의 환불을 대신 받아 갈 수 없다 — refund는 호출자 본인 몫만 처리한다", async () => {
-      const { chainBuy, usdc, reviewer, mallory, alice, createListed, fillAndFinalize } =
+      const { chainBuy, token, reviewer, mallory, alice, createListed, fillAndFinalize } =
         await loadFixture(deployFixture);
       const id = await createListed();
       await fillAndFinalize(id);
       await chainBuy.connect(reviewer).reject(id);
       await expect(chainBuy.connect(mallory).refund(id)).to.be.revertedWithCustomError(chainBuy, "NotParticipant");
-      await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(usdc, alice, MAX_PRICE);
+      await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(token, alice, MAX_PRICE);
     });
 
     it("관리자도 예치금을 꺼낼 방법이 없다 — 컨트랙트 ABI에 출금 함수가 없다 (INV-1)", async () => {
@@ -122,14 +122,14 @@ describe("05. 공격 시나리오 · 관리자 · 긴급 정지", () => {
     });
 
     it("생성자에 잘못된 값을 넣으면 배포가 실패한다", async () => {
-      const { usdc, admin } = await loadFixture(deployFixture);
+      const { token, admin } = await loadFixture(deployFixture);
       const F = await ethers.getContractFactory("ChainBuy");
-      const token = await usdc.getAddress();
+      const tokenAddress = await token.getAddress();
       await expect(F.deploy(ethers.ZeroAddress, admin.address, admin.address, 500)).to.be.revertedWithCustomError(
         F,
         "InvalidParams"
       );
-      await expect(F.deploy(token, admin.address, admin.address, 1001)).to.be.revertedWithCustomError(
+      await expect(F.deploy(tokenAddress, admin.address, admin.address, 1001)).to.be.revertedWithCustomError(
         F,
         "InvalidParams"
       );
@@ -145,7 +145,7 @@ describe("05. 공격 시나리오 · 관리자 · 긴급 정지", () => {
       await f.chainBuy.connect(f.agent).markShipped(id);
       await f.chainBuy.connect(f.admin).setFeeRecipient(f.admin.address);
       await f.chainBuy.connect(f.alice).confirmReceipt(id);
-      await expect(f.chainBuy.releaseFee(id, f.alice.address)).to.changeTokenBalance(f.usdc, f.admin, 450n);
+      await expect(f.chainBuy.releaseFee(id, f.alice.address)).to.changeTokenBalance(f.token, f.admin, 450n);
     });
   });
 
@@ -184,9 +184,9 @@ describe("05. 공격 시나리오 · 관리자 · 긴급 정지", () => {
       await f.chainBuy.connect(f.alice).confirmReceipt(id);
 
       await f.chainBuy.connect(f.admin).pause();
-      await expect(f.chainBuy.connect(f.alice).withdraw(open)).to.changeTokenBalance(f.usdc, f.alice, MAX_PRICE);
-      await expect(f.chainBuy.connect(f.alice).refund(id)).to.changeTokenBalance(f.usdc, f.alice, 1_000n);
-      await expect(f.chainBuy.releaseFee(id, f.alice.address)).to.changeTokenBalance(f.usdc, f.feeRecipient, 450n);
+      await expect(f.chainBuy.connect(f.alice).withdraw(open)).to.changeTokenBalance(f.token, f.alice, MAX_PRICE);
+      await expect(f.chainBuy.connect(f.alice).refund(id)).to.changeTokenBalance(f.token, f.alice, 1_000n);
+      await expect(f.chainBuy.releaseFee(id, f.alice.address)).to.changeTokenBalance(f.token, f.feeRecipient, 450n);
     });
   });
 });

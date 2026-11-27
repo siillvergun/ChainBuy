@@ -2015,7 +2015,7 @@ export const chainBuyAbi = [
   }
 ] as const;
 
-export const mockUsdcAbi = [
+export const chainBuyUsdAbi = [
   {
     "inputs": [],
     "stateMutability": "nonpayable",
@@ -2352,7 +2352,7 @@ export const mockUsdcAbi = [
 export const localDeployment = {
   "network": "localhost",
   "chainId": 31337,
-  "MockUSDC": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "ChainBuyUSD": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
   "ChainBuy": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
   "deployBlock": 0,
   "feeBps": 500,
@@ -2373,6 +2373,6 @@ export const localDeployment = {
 } as {
   chainId: number;
   ChainBuy: `0x${string}`;
-  MockUSDC: `0x${string}`;
+  ChainBuyUSD: `0x${string}`;
   feeBps: number;
 } | null;

@@ -19,7 +19,7 @@ from .config import settings
 
 router = APIRouter(prefix="/card", tags=["카드 발급사"])
 
-TOKEN_DECIMALS = 10**6  # MockUSDC 소수점 6자리, 화면 단위는 원
+TOKEN_DECIMALS = 10**6  # ChainBuyUSD 소수점 6자리, 화면 단위는 원
 
 
 def _card_out(c: dict) -> dict:
@@ -90,9 +90,9 @@ def _ensure_allowance(amount: int) -> None:
     s = settings()
     dep = eth.deployment()
     issuer = Account.from_key(s.card_issuer_key).address
-    (allowance,) = eth.call(dep["MockUSDC"], "allowance", ["address", "address"], [issuer, dep["ChainBuy"]], ["uint256"])
+    (allowance,) = eth.call(dep["ChainBuyUSD"], "allowance", ["address", "address"], [issuer, dep["ChainBuy"]], ["uint256"])
     if allowance < amount:
-        eth.send(s.card_issuer_key, dep["MockUSDC"], eth.calldata("approve", ["address", "uint256"], [dep["ChainBuy"], 2**256 - 1]))
+        eth.send(s.card_issuer_key, dep["ChainBuyUSD"], eth.calldata("approve", ["address", "uint256"], [dep["ChainBuy"], 2**256 - 1]))
 
 
 def _send_to_contract(fn: str, group_id: int, amount: int) -> None:

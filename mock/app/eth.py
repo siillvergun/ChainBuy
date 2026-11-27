@@ -24,7 +24,7 @@ def rpc(method: str, params: list):
 def deployment() -> dict:
     s = settings()
     if s.chainbuy_address and s.token_address:
-        return {"ChainBuy": s.chainbuy_address, "MockUSDC": s.token_address}
+        return {"ChainBuy": s.chainbuy_address, "ChainBuyUSD": s.token_address}
     return json.loads((ROOT / "blockchain" / "deployments" / "localhost.json").read_text())
 
 

@@ -4,7 +4,7 @@ import path from "path";
 import { execFileSync } from "child_process";
 
 /**
- * MockUSDC + ChainBuy 배포.
+ * ChainBuyUSD + ChainBuy 배포.
  * - 로컬(hardhat/localhost): 데모용 역할·판매자·허용 쇼핑몰을 hardhat 테스트 계정으로 등록
  * - Sepolia 등: 역할·허용 쇼핑몰을 .env 주소(REVIEWER_ADDRESS, AGENT_ADDRESS, FEE_RECIPIENT,
  *   CARD_ISSUER_ADDRESS)로 등록, 비어 있으면 배포 지갑
@@ -35,9 +35,9 @@ async function main() {
       };
 
   const startBlock = await ethers.provider.getBlockNumber();
-  const usdc = await ethers.deployContract("MockUSDC");
-  await usdc.waitForDeployment();
-  const chainBuy = await ethers.deployContract("ChainBuy", [await usdc.getAddress(), deployer.address, roles.feeRecipient, FEE_BPS]);
+  const token = await ethers.deployContract("ChainBuyUSD");
+  await token.waitForDeployment();
+  const chainBuy = await ethers.deployContract("ChainBuy", [await token.getAddress(), deployer.address, roles.feeRecipient, FEE_BPS]);
   await chainBuy.waitForDeployment();
 
   const merchantId = ethers.id("merchant:demo-mall");
@@ -48,7 +48,7 @@ async function main() {
   const out: Record<string, unknown> = {
     network: network.name,
     chainId: Number((await ethers.provider.getNetwork()).chainId),
-    MockUSDC: await usdc.getAddress(),
+    ChainBuyUSD: await token.getAddress(),
     ChainBuy: await chainBuy.getAddress(),
     deployBlock: startBlock,
     feeBps: FEE_BPS,

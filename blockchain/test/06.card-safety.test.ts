@@ -45,19 +45,19 @@ describe("06. 경로 B 안전장치 — 카드 미반환 타임아웃 · 쇼핑�
     });
 
     it("타임아웃 정산 뒤 카드 발급사가 돈을 돌려주면 참여자가 차액을 받는다", async () => {
-      const { chainBuy, usdc, cardIssuer, alice, id } = await fundedExternal();
+      const { chainBuy, token, cardIssuer, alice, id } = await fundedExternal();
       await time.increase(3n * DAY + 1n);
       await chainBuy.settleCardTimeout(id);
       await chainBuy.connect(cardIssuer).returnRefund(id, 3_000n); // 실제 결제 27,000
-      await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(usdc, alice, 1_050n);
+      await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(token, alice, 1_050n);
     });
   });
 
   describe("returnRefund", () => {
     it("이미 차액을 받은 참여자도 쇼핑몰 환불 반환분을 추가로 받는다", async () => {
-      const { chainBuy, usdc, cardIssuer, alice, bob, id } = await fundedExternal();
+      const { chainBuy, token, cardIssuer, alice, bob, id } = await fundedExternal();
       await chainBuy.connect(cardIssuer).returnRemainder(id, 3_000n); // 결제 27,000
-      await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(usdc, alice, 1_050n);
+      await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(token, alice, 1_050n);
 
       // 일부 주문 취소: 9,000 환불 → 결제 18,000 · 1인 6,000 + 수수료 300
       await expect(chainBuy.connect(cardIssuer).returnRefund(id, 9_000n))
@@ -65,8 +65,8 @@ describe("06. 경로 B 안전장치 — 카드 미반환 타임아웃 · 쇼핑�
         .withArgs(id, 9_000n, 18_000n);
 
       expect(await chainBuy.refundableAmount(id, alice.address)).to.equal(3_150n);
-      await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(usdc, alice, 3_150n);
-      await expect(chainBuy.connect(bob).refund(id)).to.changeTokenBalance(usdc, bob, 4_200n);
+      await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(token, alice, 3_150n);
+      await expect(chainBuy.connect(bob).refund(id)).to.changeTokenBalance(token, bob, 4_200n);
       expect(await chainBuy.refundedAmount(id, alice.address)).to.equal(4_200n);
 
       // 더 받을 게 없으면 거부
@@ -74,17 +74,17 @@ describe("06. 경로 B 안전장치 — 카드 미반환 타임아웃 · 쇼핑�
     });
 
     it("전액 환불되면 공구가 취소되고, 각자 이미 받은 것을 뺀 예치금 전부를 받는다", async () => {
-      const { chainBuy, usdc, cardIssuer, alice, bob, carol, id } = await fundedExternal();
+      const { chainBuy, token, cardIssuer, alice, bob, carol, id } = await fundedExternal();
       await chainBuy.connect(cardIssuer).returnRemainder(id, 3_000n);
       await chainBuy.connect(alice).refund(id); // 1,050
 
       await expect(chainBuy.connect(cardIssuer).returnRefund(id, 27_000n)).to.emit(chainBuy, "Cancelled").withArgs(id);
       expect((await chainBuy.getGroup(id)).status).to.equal(Status.CANCELLED);
 
-      await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(usdc, alice, 9_450n);
-      await expect(chainBuy.connect(bob).refund(id)).to.changeTokenBalance(usdc, bob, 10_500n);
-      await expect(chainBuy.connect(carol).refund(id)).to.changeTokenBalance(usdc, carol, 10_500n);
-      expect(await usdc.balanceOf(await chainBuy.getAddress())).to.equal(0n);
+      await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(token, alice, 9_450n);
+      await expect(chainBuy.connect(bob).refund(id)).to.changeTokenBalance(token, bob, 10_500n);
+      await expect(chainBuy.connect(carol).refund(id)).to.changeTokenBalance(token, carol, 10_500n);
+      expect(await token.balanceOf(await chainBuy.getAddress())).to.equal(0n);
     });
 
     it("카드 충전 주소만, 잔액 반환 뒤, 결제액 이하로, 배송 완료 전에만 호출할 수 있다", async () => {

@@ -22,7 +22,7 @@ npm run deploy:local         # 터미널 2: 배포 → deployments/localhost.jso
 | 파일 | 설명 |
 | --- | --- |
 | `contracts/ChainBuy.sol` | 공구 전체를 `id`로 관리하는 에스크로 |
-| `contracts/MockUSDC.sol` | 테스트 토큰 (소수점 6자리, 누구나 발행) |
+| `contracts/ChainBuyUSD.sol` | 테스트 토큰 (소수점 6자리, 누구나 발행) |
 
 ### 역할
 

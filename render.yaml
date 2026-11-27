@@ -54,7 +54,7 @@ services:
         sync: false
       - key: CHAINBUY_ADDRESS
         sync: false
-      - key: TOKEN_ADDRESS             # MockUSDC 주소
+      - key: TOKEN_ADDRESS             # ChainBuyUSD 주소
         sync: false
       - key: CARD_ISSUER_KEY           # 카드 발급사 지갑 개인키 (CARD_ISSUER_ADDRESS와 같은 지갑)
         sync: false
