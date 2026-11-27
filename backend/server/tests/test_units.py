@@ -74,3 +74,47 @@ def test_recipient_hash_uses_salt():
     assert recipient_hash(a) != recipient_hash(b)  # 같은 주소라도 사람마다 다른 해시
     assert recipient_hash(a) == recipient_hash(User(address="0x1", salt="aa", **base))
     assert recipient_hash(User(address="0x3", salt="cc")) is None  # 배송지 없음
+
+
+class FakeLlmResponse:
+    def __init__(self, body: dict):
+        self.body = body
+
+    def raise_for_status(self) -> None:
+        pass
+
+    def json(self) -> dict:
+        return self.body
+
+
+PAGE = "<h1>원두 1kg</h1><p>25,900원</p><select><option>1kg</option></select>"
+
+
+def test_llm_reader_requests_room_for_thinking(monkeypatch):
+    from app.agent import reader
+
+    sent = {}
+
+    def fake_post(url, headers, json, timeout):
+        sent.update(json)
+        reply = {"stop_reason": "end_turn", "content": [{"type": "thinking", "thinking": ""}, {"type": "text", "text": '{"price": 25900, "inStock": true, "options": ["1kg"]}'}]}
+        return FakeLlmResponse(reply)
+
+    monkeypatch.setattr(reader.httpx, "post", fake_post)
+    monkeypatch.setattr(reader, "settings", lambda: settings().model_copy(update={"llm_api_key": "test-key"}))
+
+    result = reader.read_product(PAGE)
+    assert result == {"price": 25900, "inStock": True, "options": ["1kg"], "method": "llm"}
+    assert sent["max_tokens"] >= 2000 and sent["output_config"] == {"effort": "low"}
+
+
+def test_llm_reader_falls_back_when_cut_off(monkeypatch):
+    from app.agent import reader
+
+    cut_off = {"stop_reason": "max_tokens", "content": [{"type": "thinking", "thinking": ""}]}
+    monkeypatch.setattr(reader.httpx, "post", lambda *args, **kwargs: FakeLlmResponse(cut_off))
+    monkeypatch.setattr(reader, "settings", lambda: settings().model_copy(update={"llm_api_key": "test-key"}))
+
+    result = reader.read_product(PAGE)
+    assert result["method"] == "rule" and result["price"] == 25900
+    assert "max_tokens" in result["llmError"]

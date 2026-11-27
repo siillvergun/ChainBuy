@@ -51,14 +51,21 @@ def _llm(page: str) -> dict:
         headers={"x-api-key": s.llm_api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
         json={
             "model": s.llm_model,
-            "max_tokens": 300,
+            # 최신 모델은 답하기 전에 생각(thinking)을 하고, 그 토큰도 max_tokens 안에서 쓴다.
+            # 300처럼 작게 잡으면 생각하다 잘려 JSON이 안 나오므로 여유를 두고, effort를 low로 낮춰 생각을 짧게 한다
+            "max_tokens": 2000,
+            "output_config": {"effort": "low"},
             "system": SYSTEM,
             "messages": [{"role": "user", "content": f"<page>\n{_text(page)}\n</page>"}],
         },
         timeout=60,
     )
     res.raise_for_status()
-    out = "".join(b.get("text", "") for b in res.json().get("content", []) if b.get("type") == "text")
+    body = res.json()
+    stop_reason = body.get("stop_reason")
+    if stop_reason in ("max_tokens", "refusal"):
+        raise ValueError(f"LLM 응답이 끝까지 오지 않았어요 (stop_reason={stop_reason})")
+    out = "".join(b.get("text", "") for b in body.get("content", []) if b.get("type") == "text")
     m = re.search(r"\{.*\}", out, re.S)
     if not m:
         raise ValueError("LLM이 JSON을 돌려주지 않았어요")
