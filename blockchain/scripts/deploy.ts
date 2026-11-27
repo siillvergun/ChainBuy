@@ -8,8 +8,18 @@ import { execFileSync } from "child_process";
  * - 로컬(hardhat/localhost): 데모용 역할·판매자·허용 쇼핑몰을 hardhat 테스트 계정으로 등록
  * - Sepolia 등: 역할·허용 쇼핑몰을 .env 주소(REVIEWER_ADDRESS, AGENT_ADDRESS, FEE_RECIPIENT,
  *   CARD_ISSUER_ADDRESS)로 등록, 비어 있으면 배포 지갑
+ * - 계정 추상화(ERC-4337): EntryPoint(로컬은 새로 배포, Sepolia는 표준 주소) · 스마트 지갑 팩토리 · 가스비 대납 Paymaster
  * 결과(주소·배포 블록)는 deployments/<network>.json 에 저장해 frontend·backend가 읽는다.
  */
+/** ERC-4337 v0.7 표준 EntryPoint (Sepolia 등 공개 네트워크에 같은 주소로 배포돼 있음) */
+const SEPOLIA_ENTRY_POINT = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
+
+async function deployLocalEntryPoint(): Promise<string> {
+  const entryPoint = await ethers.deployContract("EntryPoint");
+  await entryPoint.waitForDeployment();
+  return await entryPoint.getAddress();
+}
+
 async function main() {
   const signers = await ethers.getSigners();
   const deployer = signers[0];
@@ -25,6 +35,7 @@ async function main() {
         feeRecipient: signers[3].address,
         seller: signers[4].address,
         cardIssuer: signers[5].address,
+        sponsor: signers[7].address, // 백엔드: 가스 대납 서명 + 번들러 제출
       }
     : {
         reviewer: env("REVIEWER_ADDRESS"),
@@ -32,6 +43,7 @@ async function main() {
         feeRecipient: env("FEE_RECIPIENT"),
         seller: null,
         cardIssuer: env("CARD_ISSUER_ADDRESS"),
+        sponsor: env("SPONSOR_ADDRESS"),
       };
 
   const startBlock = await ethers.provider.getBlockNumber();
@@ -45,6 +57,22 @@ async function main() {
   await (await chainBuy.grantRole(await chainBuy.AGENT_ROLE(), roles.agent)).wait();
   await (await chainBuy.setMerchant(merchantId, roles.cardIssuer, true)).wait();
 
+  // ── 계정 추상화 ──
+  const entryPointAddress = isLocal ? await deployLocalEntryPoint() : SEPOLIA_ENTRY_POINT;
+  if ((await ethers.provider.getCode(entryPointAddress)) === "0x") throw new Error(`EntryPoint가 없어요: ${entryPointAddress}`);
+  const accountFactory = await ethers.deployContract("SimpleAccountFactory", [entryPointAddress]);
+  await accountFactory.waitForDeployment();
+  const paymaster = await ethers.deployContract("ChainBuyPaymaster", [
+    entryPointAddress,
+    roles.sponsor,
+    await chainBuy.getAddress(),
+    await token.getAddress(),
+  ]);
+  await paymaster.waitForDeployment();
+  // 가스비로 쓸 테스트넷 ETH를 EntryPoint에 맡겨 둔다 (로컬 10 ETH, Sepolia는 PAYMASTER_DEPOSIT_ETH, 기본 0.05)
+  const paymasterDeposit = ethers.parseEther(isLocal ? "10" : process.env.PAYMASTER_DEPOSIT_ETH ?? "0.05");
+  await (await paymaster.deposit({ value: paymasterDeposit })).wait();
+
   const out: Record<string, unknown> = {
     network: network.name,
     chainId: Number((await ethers.provider.getNetwork()).chainId),
@@ -54,6 +82,13 @@ async function main() {
     feeBps: FEE_BPS,
     roles: { admin: deployer.address, reviewer: roles.reviewer, agent: roles.agent, feeRecipient: roles.feeRecipient },
     merchant: { merchantId, cardIssuer: roles.cardIssuer },
+    accountAbstraction: {
+      entryPoint: entryPointAddress,
+      // 팩토리에는 같은 이름의 컨트랙트 함수 getAddress(owner, salt)가 있어서 배포 주소는 target으로 읽는다
+      accountFactory: accountFactory.target as string,
+      paymaster: await paymaster.getAddress(),
+      sponsor: roles.sponsor,
+    },
   };
 
   if (isLocal && roles.seller) {
