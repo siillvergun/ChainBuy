@@ -40,12 +40,12 @@ describe("01. 공구 생성 · 참여 · 마감 · 미달 환불", () => {
     });
 
     it("등록되지 않았거나 정지된 판매자·쇼핑몰로는 만들 수 없다", async () => {
-      const { chainBuy, reviewer, admin, creator, seller, cardIssuer, params } = await loadFixture(deployFixture);
+      const { chainBuy, reviewer, sellerManager, admin, creator, seller, cardIssuer, params } = await loadFixture(deployFixture);
       await expect(
         chainBuy.connect(seller).createListedGroup(ethers.id("unknown"), await params())
       ).to.be.revertedWithCustomError(chainBuy, "InactiveParty");
 
-      await chainBuy.connect(reviewer).setSeller(SELLER_ID, seller.address, false);
+      await chainBuy.connect(sellerManager).setSeller(SELLER_ID, seller.address, false);
       await expect(
         chainBuy.connect(seller).createListedGroup(SELLER_ID, await params())
       ).to.be.revertedWithCustomError(chainBuy, "InactiveParty");
@@ -75,9 +75,9 @@ describe("01. 공구 생성 · 참여 · 마감 · 미달 환불", () => {
     });
 
     it("등록부가 바뀌어도 이미 생성된 공구의 결제 대상·수수료율은 그대로다 (INV-2, INV-5)", async () => {
-      const { chainBuy, admin, reviewer, seller, mallory, createListed } = await loadFixture(deployFixture);
+      const { chainBuy, admin, sellerManager, seller, mallory, createListed } = await loadFixture(deployFixture);
       const id = await createListed();
-      await chainBuy.connect(reviewer).setSeller(SELLER_ID, mallory.address, true);
+      await chainBuy.connect(sellerManager).setSeller(SELLER_ID, mallory.address, true);
       await chainBuy.connect(admin).setFeeBps(1000);
       const g = await chainBuy.getGroup(id);
       expect(g.payee).to.equal(seller.address);

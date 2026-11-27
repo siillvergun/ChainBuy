@@ -13,6 +13,7 @@ import { chainBuyAbi, client, deployment } from "./config.js";
 const API = process.env.API ?? "http://localhost:4000";
 const KEYS = {
   reviewer: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", // #1 (REVIEWER)
+  sellerManager: "0xdf57089febbacf7ba0bc227dafbffa9fc08a93fdc68e1e42411a14efcf23656e", // #19 (SELLER_MANAGER)
   newSeller: "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e", // #6
   proposer: "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356", // #7
   influencer: "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6", // #8
@@ -56,7 +57,7 @@ async function login(key: Hex) {
   const { data } = await api("/auth/nonce", { body: { address: w.account.address } });
   const signature = await w.signMessage({ message: data.message });
   const r = await api("/auth/verify", { body: { address: w.account.address, signature } });
-  return { ...r.data, w } as { token: string; address: string; isReviewer: boolean; w: ReturnType<typeof wallet> };
+  return { ...r.data, w } as { token: string; address: string; isReviewer: boolean; isSellerManager: boolean; w: ReturnType<typeof wallet> };
 }
 
 async function send(w: ReturnType<typeof wallet>, functionName: string, args: unknown[]) {
@@ -68,9 +69,11 @@ const days = (n: number) => BigInt(Math.floor(Date.now() / 1000) + n * 86400);
 
 async function main() {
   const reviewer = await login(KEYS.reviewer);
+  const sellerManager = await login(KEYS.sellerManager);
   const seller = await login(KEYS.newSeller);
   const proposer = await login(KEYS.proposer);
   check("지갑 서명 로그인", !!seller.token && reviewer.isReviewer && !seller.isReviewer);
+  check("역할 분리: 공구 담당자 ≠ 입점 담당자", !reviewer.isSellerManager && sellerManager.isSellerManager && !sellerManager.isReviewer);
   let r0 = await api("/auth/me", { token: seller.token });
   check("로그인 응답에 만료 시각, /auth/me로 토큰 확인", r0.status === 200 && r0.data.address === seller.address && r0.data.expiresAt > Date.now());
   r0 = await api("/auth/me", { token: "invalid-token" });
@@ -87,13 +90,15 @@ async function main() {
   check("승인 전에는 상품 등록 불가", r.status === 403);
 
   r = await api("/admin/sellers", { token: proposer.token });
-  check("담당자가 아니면 관리 목록 접근 불가", r.status === 403);
+  check("입점 담당자가 아니면 관리 목록 접근 불가", r.status === 403);
+  r = await api("/admin/sellers", { token: reviewer.token });
+  check("공구 담당자도 입점 신청은 볼 수 없음", r.status === 403);
 
-  r = await api(`/admin/sellers/${sellerId}/approve`, { token: reviewer.token, body: {} });
+  r = await api(`/admin/sellers/${sellerId}/approve`, { token: sellerManager.token, body: {} });
   check("체인 등록 전에는 승인 불가", r.status === 409);
 
-  await send(reviewer.w, "setSeller", [keccak256(toBytes(sellerId)), seller.address, true]);
-  r = await api(`/admin/sellers/${sellerId}/approve`, { token: reviewer.token, body: {} });
+  await send(sellerManager.w, "setSeller", [keccak256(toBytes(sellerId)), seller.address, true]);
+  r = await api(`/admin/sellers/${sellerId}/approve`, { token: sellerManager.token, body: {} });
   check("체인 등록 후 승인", r.status === 200 && r.data.status === "approved", `${r.status}`);
 
   r = await api("/products", {

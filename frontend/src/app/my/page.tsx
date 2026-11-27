@@ -126,7 +126,12 @@ function Roles() {
       </div>
       {session!.isReviewer && (
         <Link href="/admin" className="btn-line self-start">
-          담당자 화면 (입점 신청·공구 제안 검토)
+          공구 담당자 화면 (결제 승인·공구 제안 검토)
+        </Link>
+      )}
+      {session!.isSellerManager && (
+        <Link href="/admin" className="btn-line self-start">
+          입점 담당자 화면 (판매자 입점 신청 검토)
         </Link>
       )}
     </section>

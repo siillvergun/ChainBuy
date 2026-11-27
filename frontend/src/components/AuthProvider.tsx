@@ -11,7 +11,7 @@ import { api, ApiError, SESSION_EXPIRED_EVENT } from "@/lib/api";
  * 토큰이 만료되면(시간이 지났거나 서버가 거부) 지갑 연결은 그대로 두고 세션만 "만료"로 바꾼다.
  * → 로그인이 필요한 기능은 잠기고, 화면에 "로그인이 만료됐어요. 다시 로그인해 주세요"가 나온다.
  */
-type Session = { token: string; address: string; isReviewer: boolean; expiresAt?: number };
+type Session = { token: string; address: string; isReviewer: boolean; isSellerManager?: boolean; expiresAt?: number };
 type Auth = {
   session: Session | null;
   /** 로그인했었지만 토큰이 만료된 상태 */

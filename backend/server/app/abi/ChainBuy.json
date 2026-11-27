@@ -166,6 +166,17 @@
    "inputs": [
     {
      "internalType": "address",
+     "name": "account",
+     "type": "address"
+    }
+   ],
+   "name": "RoleConflict",
+   "type": "error"
+  },
+  {
+   "inputs": [
+    {
+     "internalType": "address",
      "name": "token",
      "type": "address"
     }
@@ -964,6 +975,19 @@
    "type": "function"
   },
   {
+   "inputs": [],
+   "name": "SELLER_MANAGER_ROLE",
+   "outputs": [
+    {
+     "internalType": "bytes32",
+     "name": "",
+     "type": "bytes32"
+    }
+   ],
+   "stateMutability": "view",
+   "type": "function"
+  },
+  {
    "inputs": [
     {
      "internalType": "uint256",
@@ -1506,6 +1530,25 @@
     }
    ],
    "name": "hasRole",
+   "outputs": [
+    {
+     "internalType": "bool",
+     "name": "",
+     "type": "bool"
+    }
+   ],
+   "stateMutability": "view",
+   "type": "function"
+  },
+  {
+   "inputs": [
+    {
+     "internalType": "address",
+     "name": "",
+     "type": "address"
+    }
+   ],
+   "name": "isSellerWallet",
    "outputs": [
     {
      "internalType": "bool",
