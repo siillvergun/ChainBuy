@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     # 무료 호스팅처럼 워커를 따로 못 띄울 때: API 서버 안에서 에이전트를 같이 돌린다
     run_agent_in_api: bool = False
     mock_url: str = "http://localhost:4100"  # mock 쇼핑몰·카드 발급사·택배사
+    # 계정 추상화 (ERC-4337): 가스 대납 서명 + 번들러 제출 지갑. 기본값은 hardhat 테스트 계정 #7 (로컬 전용)
+    sponsor_key: str = "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"
+    entry_point_address: str | None = None  # 없으면 deployments/localhost.json
+    account_factory_address: str | None = None
+    paymaster_address: str | None = None
+    sponsored_operations_per_day: int = 30  # 스마트 지갑 하나당 하루 대납 횟수
     # LLM으로 상품 화면 읽기 (없으면 규칙 기반 추출)
     llm_api_key: str = ""
     llm_model: str = "claude-sonnet-5-5"
@@ -74,6 +80,17 @@ def from_block() -> int:
         return s.chainbuy_from_block
     dep = ROOT / "blockchain" / "deployments" / "localhost.json"
     return int(json.loads(dep.read_text()).get("deployBlock", 0)) if dep.exists() and not s.chainbuy_address else 0
+
+
+def account_abstraction_addresses() -> dict:
+    """EntryPoint · 스마트 지갑 팩토리 · Paymaster 주소. 환경 변수가 있으면 그것을, 없으면 로컬 배포 결과를 쓴다"""
+    s = settings()
+    if s.entry_point_address and s.account_factory_address and s.paymaster_address:
+        return {"entryPoint": s.entry_point_address, "accountFactory": s.account_factory_address, "paymaster": s.paymaster_address}
+    dep = ROOT / "blockchain" / "deployments" / "localhost.json"
+    if not dep.exists():
+        raise RuntimeError("계정 추상화 주소가 없어요. ENTRY_POINT_ADDRESS · ACCOUNT_FACTORY_ADDRESS · PAYMASTER_ADDRESS를 설정하세요.")
+    return json.loads(dep.read_text())["accountAbstraction"]
 
 
 @lru_cache

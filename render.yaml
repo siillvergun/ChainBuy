@@ -42,6 +42,14 @@ services:
         sync: false
       - key: LLM_API_URL               # BAZE면 챗봇 chat/completions 주소
         sync: false
+      - key: SPONSOR_KEY               # 가스비 대납 서명·번들러 지갑 개인키 (테스트넷 전용)
+        sync: false
+      - key: ENTRY_POINT_ADDRESS       # 0x0000000071727De22E5E9d8BAf0edAc6f37da032
+        sync: false
+      - key: ACCOUNT_FACTORY_ADDRESS   # deployments/sepolia.json accountAbstraction.accountFactory
+        sync: false
+      - key: PAYMASTER_ADDRESS         # deployments/sepolia.json accountAbstraction.paymaster
+        sync: false
 
   - type: web
     name: chainbuy-mock

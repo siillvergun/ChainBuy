@@ -17,7 +17,7 @@ from .config import CATALOG_PATH, settings
 from .db import SessionLocal
 from .errors import install as install_errors
 from .models import Product, Seller
-from .routers import core, influencers, seller_orders, users
+from .routers import core, influencers, seller_orders, users, aa
 
 # 데모 판매자 지갑 = hardhat 계정 #4 (blockchain/scripts/deploy.ts 와 같다)
 DEMO_SELLER_WALLET = "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"
@@ -81,6 +81,7 @@ TAGS_BY_PATH_PREFIX = [
     ("/likes", "찜"),
     ("/groups", "공구"),
     ("/health", "상태"),
+    ("/aa", "스마트 지갑 (계정 추상화)"),
 ]
 
 
@@ -101,4 +102,5 @@ app.include_router(core.router)
 app.include_router(influencers.router)
 app.include_router(users.router)
 app.include_router(seller_orders.router)
+app.include_router(aa.router)
 tag_routes_by_path(app)

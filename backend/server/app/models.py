@@ -1,6 +1,6 @@
 """DB 테이블 (JPA의 @Entity에 해당). 시간은 모두 밀리초 unix time (프론트·기존 API와 같은 형식)."""
 
-from sqlalchemy import BigInteger, Index, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -153,3 +153,24 @@ class AgentLog(Base):
     detail: Mapped[str | None] = mapped_column(Text)  # JSON (AI 확인 결과 등)
     tx_hash: Mapped[str | None] = mapped_column(String(66))
     created_at: Mapped[int] = mapped_column(BigInteger)
+
+
+class SmartAccount(Base):
+    """참여자 스마트 지갑(ERC-4337) ↔ 주인 MetaMask 주소. 체인에는 스마트 지갑 주소로 참여 기록이 남으므로
+    판매자 배송지 목록처럼 사용자 정보를 붙일 때 주인 주소로 되찾는다"""
+
+    __tablename__ = "smart_accounts"
+    account: Mapped[str] = mapped_column(String(42), primary_key=True)
+    owner: Mapped[str] = mapped_column(String(42), unique=True)
+    created_at: Mapped[int] = mapped_column(BigInteger)
+
+
+class SponsoredOperation(Base):
+    """플랫폼이 가스비를 대신 낸 요청(UserOperation) 기록. 하루 횟수 제한에 쓴다"""
+
+    __tablename__ = "sponsored_operations"
+    user_op_hash: Mapped[str] = mapped_column(String(66), primary_key=True)
+    account: Mapped[str] = mapped_column(String(42), index=True)
+    tx_hash: Mapped[str] = mapped_column(String(66))
+    success: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[int] = mapped_column(BigInteger, index=True)
