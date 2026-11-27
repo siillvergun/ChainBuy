@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useAccount, useDisconnect } from "wagmi";
+import { useDisconnect } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import { useMe } from "@/lib/hooks";
+import { useSmartAccount } from "@/lib/smartAccount";
 import { api, MyInfluencer, Proposal, Seller, STATUS_KO } from "@/lib/api";
 import { ParticipationRow, SummaryStats, useParticipations } from "@/components/Participations";
 import { ChainNotice, Empty } from "@/components/States";
@@ -149,10 +150,8 @@ function RoleCard({ href, title, status, desc, cta, active }: { href: string; ti
 
 /** 참여 요약 + 최근 3건. 전체 목록은 장바구니에서 */
 function Participations() {
-  const { address } = useAccount();
-  const { session } = useAuth();
-  const who = (address ?? session!.address) as `0x${string}`;
-  const { rows, holding, refundable, toConfirm, error } = useParticipations(who);
+  const account = useSmartAccount(); // 참여 기록은 스마트 지갑 주소에 남는다
+  const { rows, holding, refundable, toConfirm, error } = useParticipations(account);
 
   return (
     <section className="flex flex-col gap-4">

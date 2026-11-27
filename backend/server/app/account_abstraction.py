@@ -283,13 +283,24 @@ def verify_owner_signature(owner: str, op: dict) -> bytes:
     return h
 
 
+HANDLE_OPS_OVERHEAD_GAS = 100_000
+
+
+def _bundle_gas_limit(op: dict) -> int:
+    """UserOperation 하나를 담은 handleOps 트랜잭션의 가스 한도"""
+    limits = int.from_bytes(op["accountGasLimits"], "big")
+    verification_gas, call_gas = limits >> 128, limits & ((1 << 128) - 1)
+    return verification_gas + call_gas + PAYMASTER_VERIFICATION_GAS + PAYMASTER_POST_OP_GAS + op["preVerificationGas"] + HANDLE_OPS_OVERHEAD_GAS
+
+
 def submit(op: dict, h: bytes) -> dict:
     """EntryPoint.handleOps로 제출하고, 스마트 지갑 안의 호출까지 성공했는지 확인한다"""
     entry_point = account_abstraction_addresses()["entryPoint"]
     sponsor = Account.from_key(settings().sponsor_key).address
     data = _selector(f"handleOps({USER_OPERATION_TYPE}[],address)") + encode([f"{USER_OPERATION_TYPE}[]", "address"], [[_as_tuple(op)], sponsor])
+    # handleOps는 추정(eth_estimateGas)이 들쭉날쭉해서, 번들러들처럼 요청에 적힌 가스 한도의 합 + 여유분으로 보낸다
     try:
-        receipt = send_and_wait(settings().sponsor_key, "0x" + data.hex(), to=entry_point)
+        receipt = send_and_wait(settings().sponsor_key, "0x" + data.hex(), to=entry_point, gas=_bundle_gas_limit(op))
     except RuntimeError as e:
         raise ApiError(400, f"EntryPoint가 요청을 받지 않았어요: {e}")
 

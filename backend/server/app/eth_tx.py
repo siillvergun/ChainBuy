@@ -26,8 +26,9 @@ def send(key: str, data: str, to: str | None = None) -> str:
     return send_and_wait(key, data, to)["transactionHash"]
 
 
-def send_and_wait(key: str, data: str, to: str | None = None) -> dict:
-    """트랜잭션을 서명해 보내고 영수증(로그 포함)을 돌려준다. 실패하면 예외"""
+def send_and_wait(key: str, data: str, to: str | None = None, gas: int | None = None) -> dict:
+    """트랜잭션을 서명해 보내고 영수증(로그 포함)을 돌려준다. 실패하면 예외.
+    gas를 주면 추정(eth_estimateGas) 대신 그 값을 쓴다"""
     to = to or chainbuy_address()
     acct = Account.from_key(key)
     tx = {
@@ -38,7 +39,7 @@ def send_and_wait(key: str, data: str, to: str | None = None) -> dict:
         "chainId": int(rpc("eth_chainId", []), 16),
         "gasPrice": int(rpc("eth_gasPrice", []), 16),
     }
-    tx["gas"] = int(int(rpc("eth_estimateGas", [{"from": acct.address, "to": to, "data": data}]), 16) * 1.2)
+    tx["gas"] = gas or int(int(rpc("eth_estimateGas", [{"from": acct.address, "to": to, "data": data}]), 16) * 1.2)
     signed = acct.sign_transaction(tx)
     h = rpc("eth_sendRawTransaction", ["0x" + signed.raw_transaction.hex().removeprefix("0x")])
     for _ in range(180):

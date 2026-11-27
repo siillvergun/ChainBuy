@@ -11,8 +11,9 @@
 ## 0. 준비할 것 (직접)
 
 - **Sepolia RPC 키**: Alchemy 또는 Infura
-- **테스트넷 지갑 4개** (모두 Sepolia 테스트 ETH 필요, 실제 자산이 든 지갑은 쓰지 않기)
-  - 배포·관리자, 담당자(REVIEWER), 에이전트(AGENT), 카드 발급사
+- **테스트넷 지갑 5개** (모두 Sepolia 테스트 ETH 필요, 실제 자산이 든 지갑은 쓰지 않기)
+  - 배포·관리자, 담당자(REVIEWER), 에이전트(AGENT), 카드 발급사, 가스비 대납(SPONSOR)
+  - 참여자 지갑에는 ETH가 필요 없어요 (계정 추상화로 플랫폼이 가스비 대납)
   - 담당자·배포 지갑은 하나로 써도 됩니다
 - **Vercel 계정**, **Render 계정**
 - (선택) LLM API 키, 각 SNS OAuth 앱 키 (`backend/server/OAUTH.md`)
@@ -26,11 +27,13 @@ npm run deploy:sepolia                  # → deployments/sepolia.json (주소·
 
 배포 스크립트가 REVIEWER·AGENT 역할과 허용 쇼핑몰(`merchant:demo-mall` → 카드 발급사 지갑)을 등록합니다.
 
+계정 추상화(ERC-4337)도 같이 배포돼요: Sepolia의 표준 EntryPoint(`0x0000000071727De22E5E9d8BAf0edAc6f37da032`)를 쓰고, 스마트 지갑 팩토리와 `ChainBuyPaymaster`를 배포한 뒤 Paymaster에 가스비용 Sepolia ETH(`PAYMASTER_DEPOSIT_ETH`, 기본 0.05)를 맡겨 둡니다. `blockchain/.env`에 `SPONSOR_ADDRESS`(백엔드 `SPONSOR_KEY`의 주소)를 넣고 배포하세요. 예치금이 떨어지면 참여가 실패하니, 시연 전에 `paymaster.getDeposit()`을 확인하고 필요하면 `paymaster.deposit()`으로 더 넣어 주세요.
+
 ## 2. API · mock (Render)
 
 1. Render에서 이 저장소로 **Blueprint** 만들기 → `render.yaml`이 DB·API·mock을 만듭니다.
 2. `sync: false` 값을 채웁니다:
-   - API: `RPC_URL`, `CHAINBUY_ADDRESS`, `CHAINBUY_FROM_BLOCK`(deployBlock), `AGENT_KEY`, `WEB_ORIGIN`, `API_PUBLIC_URL`, `MOCK_URL`, `LLM_API_KEY`
+   - API: `RPC_URL`, `CHAINBUY_ADDRESS`, `CHAINBUY_FROM_BLOCK`(deployBlock), `AGENT_KEY`, `WEB_ORIGIN`, `API_PUBLIC_URL`, `MOCK_URL`, `LLM_API_KEY`, `SPONSOR_KEY`, `ENTRY_POINT_ADDRESS`, `ACCOUNT_FACTORY_ADDRESS`, `PAYMASTER_ADDRESS` (`deployments/sepolia.json`의 `accountAbstraction`)
    - mock: `RPC_URL`, `CHAINBUY_ADDRESS`, `TOKEN_ADDRESS`, `CARD_ISSUER_KEY`, `PUBLIC_URL`
 3. API는 시작할 때 `alembic upgrade head`로 테이블을 만듭니다.
 
