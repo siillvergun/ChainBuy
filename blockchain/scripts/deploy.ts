@@ -28,18 +28,25 @@ async function main() {
 
   // 역할을 줄 주소
   const env = (k: string) => (process.env[k] ? ethers.getAddress(process.env[k]!) : deployer.address);
+  // 직원 역할은 컨트랙트가 겸직을 막으므로 서로 다른 지갑이어야 한다 → 비워 둘 수 없음
+  const required = (k: string) => {
+    if (!process.env[k]) throw new Error(`${k}를 blockchain/.env에 넣어 주세요 (공구 담당자 · 입점 담당자 · 에이전트는 서로 다른 지갑)`);
+    return ethers.getAddress(process.env[k]!);
+  };
   const roles = isLocal
     ? {
         reviewer: signers[1].address,
         agent: signers[2].address,
+        sellerManager: signers[19].address, // 입점 담당자 (판매자 등록만)
         feeRecipient: signers[3].address,
         seller: signers[4].address,
         cardIssuer: signers[5].address,
         sponsor: signers[7].address, // 백엔드: 가스 대납 서명 + 번들러 제출
       }
     : {
-        reviewer: env("REVIEWER_ADDRESS"),
-        agent: env("AGENT_ADDRESS"),
+        reviewer: required("REVIEWER_ADDRESS"),
+        agent: required("AGENT_ADDRESS"),
+        sellerManager: required("SELLER_MANAGER_ADDRESS"),
         feeRecipient: env("FEE_RECIPIENT"),
         seller: null,
         cardIssuer: env("CARD_ISSUER_ADDRESS"),
@@ -55,6 +62,7 @@ async function main() {
   const merchantId = ethers.id("merchant:demo-mall");
   await (await chainBuy.grantRole(await chainBuy.REVIEWER_ROLE(), roles.reviewer)).wait();
   await (await chainBuy.grantRole(await chainBuy.AGENT_ROLE(), roles.agent)).wait();
+  await (await chainBuy.grantRole(await chainBuy.SELLER_MANAGER_ROLE(), roles.sellerManager)).wait();
   await (await chainBuy.setMerchant(merchantId, roles.cardIssuer, true)).wait();
 
   // ── 계정 추상화 ──
@@ -80,7 +88,13 @@ async function main() {
     ChainBuy: await chainBuy.getAddress(),
     deployBlock: startBlock,
     feeBps: FEE_BPS,
-    roles: { admin: deployer.address, reviewer: roles.reviewer, agent: roles.agent, feeRecipient: roles.feeRecipient },
+    roles: {
+      admin: deployer.address,
+      reviewer: roles.reviewer,
+      sellerManager: roles.sellerManager,
+      agent: roles.agent,
+      feeRecipient: roles.feeRecipient,
+    },
     merchant: { merchantId, cardIssuer: roles.cardIssuer },
     accountAbstraction: {
       entryPoint: entryPointAddress,
@@ -92,9 +106,9 @@ async function main() {
   };
 
   if (isLocal && roles.seller) {
-    // 로컬 데모 판매자 (seed.ts가 이 판매자로 공구를 연다). 등록은 REVIEWER만 할 수 있다
+    // 로컬 데모 판매자 (seed.ts가 이 판매자로 공구를 연다). 등록은 입점 담당자(SELLER_MANAGER)만 할 수 있다
     const sellerId = ethers.id("seller:demo");
-    await (await chainBuy.connect(signers[1]).setSeller(sellerId, roles.seller, true)).wait();
+    await (await chainBuy.connect(signers[19]).setSeller(sellerId, roles.seller, true)).wait();
     out.demo = { sellerId, seller: roles.seller };
   }
 

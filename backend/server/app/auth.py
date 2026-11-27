@@ -18,7 +18,7 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from .chain import is_reviewer
+from .chain import is_reviewer, is_seller_manager
 from .config import settings
 from .db import get_db
 from .errors import ApiError
@@ -64,7 +64,13 @@ def verify_login(db: Session, raw: str, signature: str) -> dict:
     s = settings()
     exp = int(time.time()) + s.jwt_ttl_seconds
     token = jwt.encode({"sub": address, "iat": int(time.time()), "exp": exp}, s.jwt_secret, algorithm="HS256")
-    return {"token": token, "address": address, "expiresAt": exp * 1000, "isReviewer": is_reviewer(address)}
+    return {
+        "token": token,
+        "address": address,
+        "expiresAt": exp * 1000,
+        "isReviewer": is_reviewer(address),
+        "isSellerManager": is_seller_manager(address),
+    }
 
 
 class CurrentUser:
@@ -98,4 +104,11 @@ def require_reviewer(user: CurrentUser = Depends(current_user)) -> CurrentUser:
 
 DB = Depends(get_db)
 AUTH = Depends(current_user)
+def require_seller_manager(user: CurrentUser = Depends(current_user)) -> CurrentUser:
+    if not is_seller_manager(user.address):
+        raise ApiError(403, "입점 담당자만 할 수 있어요.")
+    return user
+
+
 REVIEWER = Depends(require_reviewer)
+SELLER_MANAGER = Depends(require_seller_manager)

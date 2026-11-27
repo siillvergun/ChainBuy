@@ -32,19 +32,23 @@ export default function AdminPage() {
 
 function AdminHome() {
   const { session } = useAuth();
-  const [tab, setTab] = useState<"checks" | "sellers" | "proposals">("checks");
-  if (!session?.isReviewer) return <Notice tone="error">담당자(REVIEWER 역할) 지갑으로 로그인해야 볼 수 있어요.</Notice>;
+  // 공구 담당자: 결제 승인 · 외부 상품 제안 / 입점 담당자: 판매자 입점 신청 (컨트랙트가 겸직을 막는다)
+  const isReviewer = !!session?.isReviewer;
+  const isSellerManager = !!session?.isSellerManager;
+  const tabs = [
+    ...(isReviewer ? ([["checks", "결제 승인"], ["proposals", "외부 상품 공구 제안"]] as const) : []),
+    ...(isSellerManager ? ([["sellers", "판매자 입점 신청"]] as const) : []),
+  ];
+  const [picked, setTab] = useState<"checks" | "sellers" | "proposals" | null>(null);
+  if (!session || tabs.length === 0) {
+    return <Notice tone="error">공구 담당자 또는 입점 담당자 지갑으로 로그인해야 볼 수 있어요.</Notice>;
+  }
+  const tab = picked ?? tabs[0][0];
 
   return (
     <>
       <div role="tablist" className="flex gap-6 border-b border-line">
-        {(
-          [
-            ["checks", "결제 승인"],
-            ["sellers", "판매자 입점 신청"],
-            ["proposals", "외부 상품 공구 제안"],
-          ] as const
-        ).map(([v, label]) => (
+        {tabs.map(([v, label]) => (
           <button
             key={v}
             type="button"
@@ -87,7 +91,7 @@ function SellerRow({ s, token, onDone }: { s: Seller; token: string; onDone: () 
   const approve = async () => {
     setError(null);
     try {
-      // 1) 담당자 지갑으로 컨트랙트 판매자 등록부에 지갑 기록
+      // 1) 입점 담당자 지갑으로 컨트랙트 판매자 등록부에 지갑 기록
       await tx.send("판매자 지갑 등록 중", {
         address: CHAINBUY_ADDRESS!,
         abi: chainBuyAbi,

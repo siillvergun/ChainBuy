@@ -24,7 +24,7 @@ export const MAX_PRICE = 10_000n;
 export const CHECKED_PRICE = 9_000n;
 
 export async function deployFixture() {
-  const [admin, reviewer, agent, feeRecipient, seller, cardIssuer, creator, alice, bob, carol, mallory] =
+  const [admin, reviewer, agent, feeRecipient, seller, cardIssuer, creator, alice, bob, carol, mallory, , , sellerManager] =
     await ethers.getSigners();
 
   const token = await ethers.deployContract("ChainBuyUSD");
@@ -38,7 +38,8 @@ export async function deployFixture() {
 
   await chainBuy.connect(admin).grantRole(await chainBuy.REVIEWER_ROLE(), reviewer.address);
   await chainBuy.connect(admin).grantRole(await chainBuy.AGENT_ROLE(), agent.address);
-  await chainBuy.connect(reviewer).setSeller(SELLER_ID, seller.address, true);
+  await chainBuy.connect(admin).grantRole(await chainBuy.SELLER_MANAGER_ROLE(), sellerManager.address);
+  await chainBuy.connect(sellerManager).setSeller(SELLER_ID, seller.address, true);
   await chainBuy.connect(admin).setMerchant(MERCHANT_ID, cardIssuer.address, true);
 
   for (const u of [alice, bob, carol, mallory, cardIssuer]) {
@@ -95,6 +96,7 @@ export async function deployFixture() {
     bob,
     carol,
     mallory,
+    sellerManager,
     params,
     createListed,
     createExternal,

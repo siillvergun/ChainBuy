@@ -16,7 +16,7 @@ async function main() {
   );
   const signers = await ethers.getSigners();
   const [, , agent, , seller] = signers;
-  const buyers = signers.slice(8, 20);
+  const buyers = signers.slice(8, 19); // #19는 입점 담당자
   const reviewer = signers[1];
 
   const token = await ethers.getContractAt("ChainBuyUSD", dep.ChainBuyUSD);
@@ -65,9 +65,11 @@ async function main() {
 
     let left = c.fill;
     for (let b = 0; left > 0; b = (b + 1) % buyers.length) {
-      const q = Math.min(left, 1 + ((b + i) % 3));
       const mine = await cb.getParticipant(id, buyers[b].address);
-      if (Number(mine.qty) + q > 3) continue;
+      const roomForBuyer = 3 - Number(mine.qty); // 1인 최대 3개
+      // 남은 자리만큼만 넣는다 (꽉 찬 사람을 건너뛰기만 하면 남은 수량을 못 채워 끝나지 않을 수 있음)
+      const q = Math.min(left, 1 + ((b + i) % 3), roomForBuyer);
+      if (q <= 0) continue;
       await (await cb.connect(buyers[b]).deposit(id, q, ethers.id(`addr:${buyers[b].address}`))).wait();
       left -= q;
     }

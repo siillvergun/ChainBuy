@@ -24,6 +24,8 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
 
     bytes32 public constant AGENT_ROLE = keccak256("AGENT_ROLE");
     bytes32 public constant REVIEWER_ROLE = keccak256("REVIEWER_ROLE");
+    /// @notice 입점 담당자: 판매자 등록만 한다. 공구 담당자(REVIEWER)와 겸할 수 없다
+    bytes32 public constant SELLER_MANAGER_ROLE = keccak256("SELLER_MANAGER_ROLE");
 
     uint16 public constant BPS = 10_000;
     uint16 public constant MAX_FEE_BPS = 1_000; // 10%
@@ -117,6 +119,8 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
     uint16 public feeBps;
 
     mapping(bytes32 => Seller) public sellers;
+    /// @notice 판매자로 등록된 적 있는 지갑 (담당자 겸직 차단용)
+    mapping(address => bool) public isSellerWallet;
     mapping(bytes32 => Merchant) public merchants;
 
     uint256 public groupCount;
@@ -190,6 +194,7 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
     error FeeNotReleasable();
     error Unauthorized();
     error ReturnWindowOpen();
+    error RoleConflict(address account);
 
     // ─────────────────────────────── 생성자 ───────────────────────────────
 
@@ -207,10 +212,30 @@ contract ChainBuy is AccessControl, ReentrancyGuard, Pausable {
     // ─────────────────────────────── 관리자·등록부 ───────────────────────────────
 
     /// @notice 판매자 결제 지갑 등록·변경·정지. 기존 공구의 결제 대상에는 영향 없음 (SEL-03, SEL-04).
-    function setSeller(bytes32 sellerId, address wallet, bool active) external onlyRole(REVIEWER_ROLE) {
+    /// 입점 담당자만 등록할 수 있고, 담당자·에이전트 지갑은 판매자가 될 수 없다 (한 사람이 공구를 열고 승인해 돈을 가져가는 것 차단)
+    function setSeller(bytes32 sellerId, address wallet, bool active) external onlyRole(SELLER_MANAGER_ROLE) {
         if (wallet == address(0)) revert InvalidParams();
+        if (_isStaff(wallet)) revert RoleConflict(wallet);
         sellers[sellerId] = Seller(wallet, active);
+        isSellerWallet[wallet] = true; // 한 번 판매자였던 지갑은 정지·변경 후에도 담당자가 될 수 없다
         emit SellerSet(sellerId, wallet, active);
+    }
+
+    /// @dev 결제에 관여하는 직원 역할 (공구 담당자 · 입점 담당자 · 에이전트)
+    function _isStaff(address account) private view returns (bool) {
+        return hasRole(REVIEWER_ROLE, account) || hasRole(SELLER_MANAGER_ROLE, account) || hasRole(AGENT_ROLE, account);
+    }
+
+    /// @dev 역할 부여 때 겸직을 막는다.
+    ///  - 직원 역할(공구 담당자 · 입점 담당자 · 에이전트)은 지갑 하나에 하나만
+    ///    (에이전트 = 담당자면 AI 검증을 꾸며 스스로 승인할 수 있고, 담당자 = 입점 담당자면 자기 판매자를 만들 수 있다)
+    ///  - 판매자로 등록된 적 있는 지갑은 직원 역할을 받을 수 없다
+    function _grantRole(bytes32 role, address account) internal override returns (bool) {
+        bool staffRole = role == REVIEWER_ROLE || role == SELLER_MANAGER_ROLE || role == AGENT_ROLE;
+        if (staffRole && !hasRole(role, account)) {
+            if (isSellerWallet[account] || _isStaff(account)) revert RoleConflict(account);
+        }
+        return super._grantRole(role, account);
     }
 
     /// @notice 허용 쇼핑몰과 카드 충전 주소 등록·해제 (ADM-05).

@@ -11,8 +11,8 @@ from pydantic import BaseModel, Field, ValidationError, field_validator, model_v
 from sqlalchemy import case, select
 from sqlalchemy.orm import Session
 
-from ..auth import AUTH, DB, REVIEWER, CurrentUser, issue_nonce, now_ms, verify_login
-from ..chain import id_hash, is_reviewer, onchain_group, onchain_seller
+from ..auth import AUTH, DB, REVIEWER, SELLER_MANAGER, CurrentUser, issue_nonce, now_ms, verify_login
+from ..chain import id_hash, is_reviewer, is_seller_manager, onchain_group, onchain_seller
 from ..config import ALLOWED_MALLS, CATEGORIES
 from ..errors import ApiError
 from ..models import AgentLog, Product, Proposal, Seller
@@ -69,7 +69,12 @@ def auth_verify(body: VerifyIn, db: Session = DB):
 @router.get("/auth/me")
 def auth_me(user: CurrentUser = AUTH):
     """저장해 둔 토큰이 아직 유효한지 확인 (만료 감지)"""
-    return {"address": user.address, "expiresAt": user.expires_at, "isReviewer": is_reviewer(user.address)}
+    return {
+        "address": user.address,
+        "expiresAt": user.expires_at,
+        "isReviewer": is_reviewer(user.address),
+        "isSellerManager": is_seller_manager(user.address),
+    }
 
 
 # ─────────────── 상품 ───────────────
@@ -334,13 +339,13 @@ class ReasonIn(BaseModel):
 
 
 @router.get("/admin/sellers")
-def admin_sellers(_: CurrentUser = REVIEWER, db: Session = DB):
+def admin_sellers(_: CurrentUser = SELLER_MANAGER, db: Session = DB):
     rows = db.scalars(select(Seller).order_by(case((Seller.status == "pending", 0), else_=1), Seller.created_at.desc())).all()
     return [seller_out(s) for s in rows]
 
 
 @router.post("/admin/sellers/{seller_id}/approve")
-def admin_seller_approve(seller_id: str, _: CurrentUser = REVIEWER, db: Session = DB):
+def admin_seller_approve(seller_id: str, _: CurrentUser = SELLER_MANAGER, db: Session = DB):
     s = db.get(Seller, seller_id)
     if not s:
         raise ApiError(404, "신청을 찾을 수 없어요.")
@@ -352,7 +357,7 @@ def admin_seller_approve(seller_id: str, _: CurrentUser = REVIEWER, db: Session 
 
 
 @router.post("/admin/sellers/{seller_id}/reject")
-def admin_seller_reject(seller_id: str, body: ReasonIn, _: CurrentUser = REVIEWER, db: Session = DB):
+def admin_seller_reject(seller_id: str, body: ReasonIn, _: CurrentUser = SELLER_MANAGER, db: Session = DB):
     s = db.get(Seller, seller_id)
     if not s or s.status != "pending":
         raise ApiError(404, "대기 중인 신청이 아니에요.")

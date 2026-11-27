@@ -17,7 +17,7 @@ describe("05. 공격 시나리오 · 관리자 · 긴급 정지", () => {
       expect(g.payee).to.equal(seller.address);
     });
 
-    it("판매자 등록부 변경은 담당자만 할 수 있다", async () => {
+    it("판매자 등록부 변경은 입점 담당자만 할 수 있다", async () => {
       const { chainBuy, mallory } = await loadFixture(deployFixture);
       await expect(
         chainBuy.connect(mallory).setSeller(SELLER_ID, mallory.address, true)
@@ -108,9 +108,9 @@ describe("05. 공격 시나리오 · 관리자 · 긴급 정지", () => {
     });
 
     it("0 주소는 등록할 수 없다", async () => {
-      const { chainBuy, admin, reviewer } = await loadFixture(deployFixture);
+      const { chainBuy, admin, sellerManager } = await loadFixture(deployFixture);
       await expect(
-        chainBuy.connect(reviewer).setSeller(SELLER_ID, ethers.ZeroAddress, true)
+        chainBuy.connect(sellerManager).setSeller(SELLER_ID, ethers.ZeroAddress, true)
       ).to.be.revertedWithCustomError(chainBuy, "InvalidParams");
       await expect(
         chainBuy.connect(admin).setMerchant(ethers.id("m"), ethers.ZeroAddress, true)

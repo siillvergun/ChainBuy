@@ -50,15 +50,25 @@ def call(name: str, *args):
 
 
 REVIEWER_ROLE = "0x" + keccak(text="REVIEWER_ROLE").hex()
+SELLER_MANAGER_ROLE = "0x" + keccak(text="SELLER_MANAGER_ROLE").hex()
 
 
-def is_reviewer(address: str) -> bool:
-    """담당자 권한은 서버가 따로 두지 않고 컨트랙트 REVIEWER_ROLE을 따른다"""
+def _has_role(role: str, address: str) -> bool:
     try:
-        (ok,), _ = call("hasRole", bytes.fromhex(REVIEWER_ROLE[2:]), address)
+        (ok,), _ = call("hasRole", bytes.fromhex(role[2:]), address)
         return bool(ok)
     except Exception:
         return False
+
+
+def is_reviewer(address: str) -> bool:
+    """공구 담당자 권한은 서버가 따로 두지 않고 컨트랙트 REVIEWER_ROLE을 따른다"""
+    return _has_role(REVIEWER_ROLE, address)
+
+
+def is_seller_manager(address: str) -> bool:
+    """입점 담당자(판매자 등록) 권한. 컨트랙트가 공구 담당자와 겸직을 막는다"""
+    return _has_role(SELLER_MANAGER_ROLE, address)
 
 
 def onchain_seller(seller_id: str) -> dict:
