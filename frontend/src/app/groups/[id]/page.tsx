@@ -11,7 +11,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { SponsorBadge } from "@/components/SponsorBadge";
 import { NetworkCheck } from "@/components/NetworkCheck";
 import { LikeButton } from "@/components/LikeButton";
-import { useTx } from "@/lib/useTx";
+import { useSponsoredTx, useSmartAccount } from "@/lib/smartAccount";
 import { chainBuyAbi, chainBuyUsdAbi } from "@/lib/contracts.generated";
 import { CHAINBUY_ADDRESS, TOKEN_ADDRESS, activeChain } from "@/lib/config";
 import { GroupView, STATUS_LABEL, discountRate, remaining, toToken, unitDeposit, won } from "@/lib/groups";
@@ -256,22 +256,24 @@ function ActivityLog({ groupId }: { groupId: number }) {
 }
 
 function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
+  // 참여·토큰 잔액은 MetaMask 주소가 아니라 그 주소가 주인인 스마트 지갑 기준 (가스비는 플랫폼이 냄)
+  const account = useSmartAccount();
   const { session, expired } = useAuth();
   const me = useMe(session?.token);
   const recipientHash = me.data?.recipientHash ?? null;
   const here = `/groups/${g.id}`;
   const { participant, refundable, fee, refetch: refetchMe } = useMyParticipation(g.id);
-  const tx = useTx();
+  const tx = useSponsoredTx();
   const [qty, setQty] = useState(1);
   const [reason, setReason] = useState("");
 
   const tokenReads = useReadContracts({
     contracts: [
-      { address: TOKEN_ADDRESS, abi: chainBuyUsdAbi, functionName: "balanceOf", args: [address!] },
-      { address: TOKEN_ADDRESS, abi: chainBuyUsdAbi, functionName: "allowance", args: [address!, CHAINBUY_ADDRESS!] },
+      { address: TOKEN_ADDRESS, abi: chainBuyUsdAbi, functionName: "balanceOf", args: [account!] },
+      { address: TOKEN_ADDRESS, abi: chainBuyUsdAbi, functionName: "allowance", args: [account!, CHAINBUY_ADDRESS!] },
     ],
-    query: { enabled: !!address && !!TOKEN_ADDRESS && !!CHAINBUY_ADDRESS },
+    query: { enabled: !!account && !!TOKEN_ADDRESS && !!CHAINBUY_ADDRESS },
   });
   const balance = (tokenReads.data?.[0]?.result as bigint | undefined) ?? 0n;
   const allowance = (tokenReads.data?.[1]?.result as bigint | undefined) ?? 0n;
@@ -281,6 +283,7 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
   const total = unitDeposit(g) * BigInt(qty);
   const open = g.statusName === "OPEN" && Number(g.deadline) * 1000 > Date.now();
   const cb = { address: CHAINBUY_ADDRESS!, abi: chainBuyAbi } as const;
+  const token = { address: TOKEN_ADDRESS!, abi: chainBuyUsdAbi } as const;
 
   const after = async () => {
     await Promise.all([refetch(), refetchMe(), tokenReads.refetch()]);
@@ -298,7 +301,7 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
   if (!isConnected) {
     return (
       <div className="flex flex-col gap-3 rounded-lg bg-paper p-4 text-sm text-[#4A4A4A]">
-        <span>참여하려면 지갑으로 로그인해 주세요. 참여금은 지갑에서 컨트랙트로 바로 예치돼요.</span>
+        <span>참여하려면 지갑으로 로그인해 주세요. 참여금은 내 스마트 지갑에서 컨트랙트로 바로 예치되고, 가스비(ETH)는 플랫폼이 대신 내요.</span>
         <Link href={`/login?next=${encodeURIComponent(here)}`} className="btn-primary h-12 text-base">
           로그인하고 참여하기
         </Link>
@@ -353,9 +356,7 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
               className="btn-dark h-[52px] text-base"
               disabled={!!tx.pending}
               onClick={() =>
-                run("faucet", () =>
-                  tx.send("테스트 토큰 받는 중", { address: TOKEN_ADDRESS!, abi: chainBuyUsdAbi, functionName: "mint", args: [address!, toToken(1_000_000)] })
-                )
+                run("faucet", () => tx.send("테스트 토큰 받는 중", [{ ...token, functionName: "mint", args: [account!, toToken(1_000_000)] }]))
               }
             >
               {tx.pending ?? "테스트 토큰 100만원 받기"}
@@ -366,12 +367,13 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
               className="btn-primary h-[52px] text-base"
               disabled={!!tx.pending}
               onClick={() =>
-                run("deposit", async () => {
-                  if (allowance < total) {
-                    await tx.send("토큰 사용 승인 중", { address: TOKEN_ADDRESS!, abi: chainBuyUsdAbi, functionName: "approve", args: [CHAINBUY_ADDRESS!, total] });
-                  }
+                run("deposit", () => {
                   // 배송지 원문은 서버에만 두고, 체인에는 솔트를 섞은 배송지 해시만 남긴다 (DEP-04)
-                  await tx.send("참여금 예치 중", { ...cb, functionName: "deposit", args: [g.id, qty, recipientHash!] });
+                  const deposit = { ...cb, functionName: "deposit", args: [g.id, qty, recipientHash!] };
+                  const approve = { ...token, functionName: "approve", args: [CHAINBUY_ADDRESS!, total] };
+                  // 승인이 부족하면 승인 + 예치를 한 번의 서명으로 묶는다
+                  const calls = allowance < total ? [approve, deposit] : [deposit];
+                  return tx.send("참여금 예치 중", calls);
                 })
               }
             >
@@ -390,13 +392,13 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
       )}
 
       {open && myQty > 0 && (
-        <button type="button" className="btn-line" disabled={!!tx.pending} onClick={() => run("withdraw", () => tx.send("참여 취소 중", { ...cb, functionName: "withdraw", args: [g.id] }))}>
+        <button type="button" className="btn-line" disabled={!!tx.pending} onClick={() => run("withdraw", () => tx.send("참여 취소 중", [{ ...cb, functionName: "withdraw", args: [g.id] }]))}>
           참여 취소하고 전액 돌려받기
         </button>
       )}
 
       {refundable > 0n && (
-        <button type="button" className="btn-dark h-[52px] text-base" disabled={!!tx.pending} onClick={() => run("refund", () => tx.send("환불 받는 중", { ...cb, functionName: "refund", args: [g.id] }))}>
+        <button type="button" className="btn-dark h-[52px] text-base" disabled={!!tx.pending} onClick={() => run("refund", () => tx.send("환불 받는 중", [{ ...cb, functionName: "refund", args: [g.id] }]))}>
           {won(refundable)} 환불 받기
         </button>
       )}
@@ -406,7 +408,7 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
           <p className="text-sm leading-6">
             상품을 받으셨나요? 확인하면 내 몫의 플랫폼 수수료가 지급돼요. 확인하지 않아도 배송 후 7일 동안 이의가 없으면 지급돼요.
           </p>
-          <button type="button" className="btn-primary" disabled={!!tx.pending} onClick={() => run("confirm", () => tx.send("수령 확인 중", { ...cb, functionName: "confirmReceipt", args: [g.id] }))}>
+          <button type="button" className="btn-primary" disabled={!!tx.pending} onClick={() => run("confirm", () => tx.send("수령 확인 중", [{ ...cb, functionName: "confirmReceipt", args: [g.id] }]))}>
             잘 받았어요
           </button>
           <label className="sr-only" htmlFor="reason">
@@ -417,7 +419,7 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
             type="button"
             className="btn-line"
             disabled={!!tx.pending || !reason}
-            onClick={() => run("dispute", () => tx.send("이의 접수 중", { ...cb, functionName: "dispute", args: [g.id, keccak256(toBytes(reason))] }))}
+            onClick={() => run("dispute", () => tx.send("이의 접수 중", [{ ...cb, functionName: "dispute", args: [g.id, keccak256(toBytes(reason))] }]))}
           >
             문제가 있어요
           </button>

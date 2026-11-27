@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, Seller } from "@/lib/api";
 import { shortAddr } from "@/lib/groups";
 import { ONGOING, useMe, useMyGroups } from "@/lib/hooks";
+import { useSmartAccount } from "@/lib/smartAccount";
 import { useAuth } from "./AuthProvider";
 
 /**
@@ -74,7 +75,8 @@ export function UtilityLinks() {
 export function IconButtons() {
   const mounted = useMounted();
   const { session } = useAuth();
-  const mine = useMyGroups(session?.address as `0x${string}` | undefined);
+  const account = useSmartAccount(); // 참여 기록은 스마트 지갑 주소에 남는다
+  const mine = useMyGroups(account);
   const ongoing = mounted && session ? mine.filter((g) => ONGOING.has(g.statusName)).length : 0;
   const loginFirst = (to: string) => (mounted && session ? to : `/login?next=${encodeURIComponent(to)}`);
 

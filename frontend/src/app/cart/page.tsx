@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useAuth } from "@/components/AuthProvider";
 import { LoginGate } from "@/components/LoginGate";
+import { useSmartAccount } from "@/lib/smartAccount";
 import { ParticipationRow, SummaryStats, useParticipations } from "@/components/Participations";
 import { ChainNotice, Empty } from "@/components/States";
 
@@ -20,8 +20,8 @@ export default function CartPage() {
 }
 
 function Cart() {
-  const { session } = useAuth();
-  const { ongoing, ended, holding, refundable, toConfirm, error, isLoading } = useParticipations(session!.address as `0x${string}`);
+  const account = useSmartAccount(); // 참여 기록은 스마트 지갑 주소에 남는다
+  const { ongoing, ended, holding, refundable, toConfirm, error, isLoading } = useParticipations(account);
   const [tab, setTab] = useState<"ongoing" | "ended">("ongoing");
   const list = tab === "ongoing" ? ongoing : ended;
 

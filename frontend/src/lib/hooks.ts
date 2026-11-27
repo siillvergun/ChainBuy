@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
+import { useReadContract, useReadContracts } from "wagmi";
 import { chainBuyAbi } from "./contracts.generated";
 import { CHAINBUY_ADDRESS } from "./config";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OnchainGroup, toView, GroupView, Product, fallbackProducts } from "./groups";
 import { api, ApiProduct, SponsorTag, UserProfile } from "./api";
+import { useSmartAccount } from "./smartAccount";
 
 const cb = { address: CHAINBUY_ADDRESS, abi: chainBuyAbi } as const;
 
@@ -66,7 +67,8 @@ export function useGroup(id: bigint) {
 }
 
 export function useMyParticipation(id: bigint) {
-  const { address } = useAccount();
+  // 참여는 스마트 지갑(계정 추상화)으로 하므로 그 주소로 읽는다
+  const address = useSmartAccount();
   const res = useReadContracts({
     contracts: [
       { ...cb, functionName: "getParticipant", args: [id, address!] },
