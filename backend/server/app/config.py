@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = "claude-sonnet-5-5"
     llm_api_url: str = "https://api.anthropic.com/v1/messages"
+    # 요청 형식: anthropic(Claude API 직접) | openai(인천대 BAZE 같은 OpenAI 호환 게이트웨이)
+    llm_api_format: str = "anthropic"
 
     google_client_id: str = ""
     google_client_secret: str = ""

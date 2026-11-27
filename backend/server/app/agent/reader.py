@@ -3,6 +3,7 @@
 - LLM 키가 있으면 LLM에게 '정해진 JSON 형식으로만' 추출을 맡긴다.
 - 페이지 글자는 데이터일 뿐 지시가 아니다: 시스템 프롬프트로 못 박고, 결과도 형식 검증 후에만 쓴다 (프롬프트 인젝션 대비).
 - 키가 없으면 규칙 기반(정규식)으로 추출한다.
+- LLM_API_FORMAT=openai 이면 OpenAI 호환 게이트웨이(인천대 BAZE 챗봇 API)로 보낸다.
 """
 
 import html as html_lib
@@ -44,8 +45,34 @@ def _rule_based(page: str) -> dict:
     return {"price": price, "inStock": in_stock, "options": options, "method": "rule"}
 
 
+def _parse_reply(out: str, method: str) -> dict:
+    m = re.search(r"\{.*\}", out, re.S)
+    if not m:
+        raise ValueError("LLM이 JSON을 돌려주지 않았어요")
+    return {**_validate(json.loads(m.group(0))), "method": method}
+
+
+def _llm_openai(page: str) -> dict:
+    """OpenAI Chat Completions 형식 게이트웨이 (인천대 BAZE).
+    BAZE는 model을 받지 않고(챗봇에 정해진 모델 사용) system 메시지도 무시하므로, 지시문을 user 메시지 앞에 붙인다."""
+    s = settings()
+    res = httpx.post(
+        s.llm_api_url,
+        headers={"Authorization": f"Bearer {s.llm_api_key}", "content-type": "application/json"},
+        json={"messages": [{"role": "user", "content": f"{SYSTEM}\n\n<page>\n{_text(page)}\n</page>"}]},
+        timeout=60,
+    )
+    res.raise_for_status()
+    choice = (res.json().get("choices") or [{}])[0]
+    if choice.get("finish_reason") == "length":
+        raise ValueError("LLM 응답이 끝까지 오지 않았어요 (finish_reason=length)")
+    return _parse_reply((choice.get("message") or {}).get("content") or "", "llm")
+
+
 def _llm(page: str) -> dict:
     s = settings()
+    if s.llm_api_format == "openai":
+        return _llm_openai(page)
     res = httpx.post(
         s.llm_api_url,
         headers={"x-api-key": s.llm_api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
@@ -66,10 +93,7 @@ def _llm(page: str) -> dict:
     if stop_reason in ("max_tokens", "refusal"):
         raise ValueError(f"LLM 응답이 끝까지 오지 않았어요 (stop_reason={stop_reason})")
     out = "".join(b.get("text", "") for b in body.get("content", []) if b.get("type") == "text")
-    m = re.search(r"\{.*\}", out, re.S)
-    if not m:
-        raise ValueError("LLM이 JSON을 돌려주지 않았어요")
-    return {**_validate(json.loads(m.group(0))), "method": "llm"}
+    return _parse_reply(out, "llm")
 
 
 def read_product(page: str) -> dict:

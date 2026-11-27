@@ -118,3 +118,25 @@ def test_llm_reader_falls_back_when_cut_off(monkeypatch):
     result = reader.read_product(PAGE)
     assert result["method"] == "rule" and result["price"] == 25900
     assert "max_tokens" in result["llmError"]
+
+
+def test_llm_reader_openai_format_for_baze_gateway(monkeypatch):
+    from app.agent import reader
+
+    sent = {}
+
+    def fake_post(url, headers, json, timeout):
+        sent.update(url=url, headers=headers, body=json)
+        reply = {"choices": [{"finish_reason": "stop", "message": {"content": '```json\n{"price": 25900, "inStock": true, "options": ["1kg"]}\n```'}}]}
+        return FakeLlmResponse(reply)
+
+    monkeypatch.setattr(reader.httpx, "post", fake_post)
+    gateway = {"llm_api_key": "baze-key", "llm_api_format": "openai", "llm_api_url": "https://gateway.example/chat/completions/"}
+    monkeypatch.setattr(reader, "settings", lambda: settings().model_copy(update=gateway))
+
+    result = reader.read_product(PAGE)
+    assert result == {"price": 25900, "inStock": True, "options": ["1kg"], "method": "llm"}
+    assert sent["headers"]["Authorization"] == "Bearer baze-key"
+    # BAZE는 system 메시지를 무시하므로 지시문이 user 메시지에 들어가야 한다
+    only_message = sent["body"]["messages"][0]
+    assert only_message["role"] == "user" and "untrusted data" in only_message["content"]

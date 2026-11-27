@@ -36,7 +36,11 @@ services:
         sync: false
       - key: MOCK_URL                  # chainbuy-mock 주소
         sync: false
-      - key: LLM_API_KEY
+      - key: LLM_API_KEY               # Claude API 키 또는 인천대 BAZE 키
+        sync: false
+      - key: LLM_API_FORMAT            # BAZE면 openai
+        sync: false
+      - key: LLM_API_URL               # BAZE면 챗봇 chat/completions 주소
         sync: false
 
   - type: web
