@@ -12,8 +12,8 @@ import { SponsorBadge } from "@/components/SponsorBadge";
 import { NetworkCheck } from "@/components/NetworkCheck";
 import { LikeButton } from "@/components/LikeButton";
 import { useTx } from "@/lib/useTx";
-import { chainBuyAbi, mockUsdcAbi } from "@/lib/contracts.generated";
-import { CHAINBUY_ADDRESS, USDC_ADDRESS, activeChain } from "@/lib/config";
+import { chainBuyAbi, chainBuyUsdAbi } from "@/lib/contracts.generated";
+import { CHAINBUY_ADDRESS, TOKEN_ADDRESS, activeChain } from "@/lib/config";
 import { GroupView, STATUS_LABEL, discountRate, remaining, toToken, unitDeposit, won } from "@/lib/groups";
 import { ProductThumb } from "@/components/ProductThumb";
 import { ChainNotice } from "@/components/States";
@@ -268,10 +268,10 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
 
   const tokenReads = useReadContracts({
     contracts: [
-      { address: USDC_ADDRESS, abi: mockUsdcAbi, functionName: "balanceOf", args: [address!] },
-      { address: USDC_ADDRESS, abi: mockUsdcAbi, functionName: "allowance", args: [address!, CHAINBUY_ADDRESS!] },
+      { address: TOKEN_ADDRESS, abi: chainBuyUsdAbi, functionName: "balanceOf", args: [address!] },
+      { address: TOKEN_ADDRESS, abi: chainBuyUsdAbi, functionName: "allowance", args: [address!, CHAINBUY_ADDRESS!] },
     ],
-    query: { enabled: !!address && !!USDC_ADDRESS && !!CHAINBUY_ADDRESS },
+    query: { enabled: !!address && !!TOKEN_ADDRESS && !!CHAINBUY_ADDRESS },
   });
   const balance = (tokenReads.data?.[0]?.result as bigint | undefined) ?? 0n;
   const allowance = (tokenReads.data?.[1]?.result as bigint | undefined) ?? 0n;
@@ -354,7 +354,7 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
               disabled={!!tx.pending}
               onClick={() =>
                 run("faucet", () =>
-                  tx.send("테스트 토큰 받는 중", { address: USDC_ADDRESS!, abi: mockUsdcAbi, functionName: "mint", args: [address!, toToken(1_000_000)] })
+                  tx.send("테스트 토큰 받는 중", { address: TOKEN_ADDRESS!, abi: chainBuyUsdAbi, functionName: "mint", args: [address!, toToken(1_000_000)] })
                 )
               }
             >
@@ -368,7 +368,7 @@ function Actions({ g, refetch }: { g: GroupView; refetch: () => void }) {
               onClick={() =>
                 run("deposit", async () => {
                   if (allowance < total) {
-                    await tx.send("토큰 사용 승인 중", { address: USDC_ADDRESS!, abi: mockUsdcAbi, functionName: "approve", args: [CHAINBUY_ADDRESS!, total] });
+                    await tx.send("토큰 사용 승인 중", { address: TOKEN_ADDRESS!, abi: chainBuyUsdAbi, functionName: "approve", args: [CHAINBUY_ADDRESS!, total] });
                   }
                   // 배송지 원문은 서버에만 두고, 체인에는 솔트를 섞은 배송지 해시만 남긴다 (DEP-04)
                   await tx.send("참여금 예치 중", { ...cb, functionName: "deposit", args: [g.id, qty, recipientHash!] });

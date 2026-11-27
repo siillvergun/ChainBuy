@@ -100,7 +100,7 @@ describe("04. 주문 증거 · 배송 · 수령 확인 · 이의 · 수수료 �
         .withArgs(f.id, f.alice.address);
       // 아무나(여기서는 mallory) 지급 함수를 호출해도 돈은 플랫폼 수수료 주소로만 간다
       await expect(f.chainBuy.connect(f.mallory).releaseFee(f.id, f.alice.address)).to.changeTokenBalance(
-        f.usdc,
+        f.token,
         f.feeRecipient,
         450n
       );
@@ -117,7 +117,7 @@ describe("04. 주문 증거 · 배송 · 수령 확인 · 이의 · 수수료 �
         "FeeNotReleasable"
       );
       await time.increase(7n * DAY + 1n);
-      await expect(f.chainBuy.releaseFee(f.id, f.bob.address)).to.changeTokenBalance(f.usdc, f.feeRecipient, 450n);
+      await expect(f.chainBuy.releaseFee(f.id, f.bob.address)).to.changeTokenBalance(f.token, f.feeRecipient, 450n);
     });
 
     it("수용 기준: 2명 수령 확인 + 1명 7일 경과 → 수수료 3몫 지급, 공구 완료", async () => {
@@ -129,11 +129,11 @@ describe("04. 주문 증거 · 배송 · 수령 확인 · 이의 · 수수료 �
       await time.increase(7n * DAY + 1n);
       await expect(f.chainBuy.releaseFee(f.id, f.carol.address)).to.emit(f.chainBuy, "Completed").withArgs(f.id);
 
-      expect(await f.usdc.balanceOf(f.feeRecipient.address)).to.equal(1_350n);
+      expect(await f.token.balanceOf(f.feeRecipient.address)).to.equal(1_350n);
       expect((await f.chainBuy.getGroup(f.id)).status).to.equal(Status.COMPLETED);
 
       // 완료 후에도 차액 환불은 받을 수 있다
-      await expect(f.chainBuy.connect(f.alice).refund(f.id)).to.changeTokenBalance(f.usdc, f.alice, 1_000n);
+      await expect(f.chainBuy.connect(f.alice).refund(f.id)).to.changeTokenBalance(f.token, f.alice, 1_000n);
     });
 
     it("이미 응답한 참여자는 다시 확인·이의할 수 없고, 비참여자는 아무것도 할 수 없다", async () => {
@@ -187,7 +187,7 @@ describe("04. 주문 증거 · 배송 · 수령 확인 · 이의 · 수수료 �
       await f.chainBuy.connect(f.agent).submitOrderProof(id, ethers.id("ext-order"));
       await f.chainBuy.connect(f.agent).markShipped(id);
       await f.chainBuy.connect(f.alice).confirmReceipt(id);
-      await expect(f.chainBuy.releaseFee(id, f.alice.address)).to.changeTokenBalance(f.usdc, f.feeRecipient, 450n);
+      await expect(f.chainBuy.releaseFee(id, f.alice.address)).to.changeTokenBalance(f.token, f.feeRecipient, 450n);
     });
   });
 
@@ -211,14 +211,14 @@ describe("04. 주문 증거 · 배송 · 수령 확인 · 이의 · 수수료 �
         .to.emit(f.chainBuy, "DisputeResolved")
         .withArgs(f.id, f.alice.address, true, 450n);
       // (차액 1,000은 refund로 따로 받는다)
-      expect(await f.usdc.balanceOf(f.feeRecipient.address)).to.equal(0n);
+      expect(await f.token.balanceOf(f.feeRecipient.address)).to.equal(0n);
     });
 
     it("이의가 기각되면 수수료는 플랫폼에 지급된다", async () => {
       const f = await shippedListed();
       await f.chainBuy.connect(f.alice).dispute(f.id, ethers.id("changed mind"));
       await expect(f.chainBuy.connect(f.reviewer).resolveDispute(f.id, f.alice.address, false)).to.changeTokenBalance(
-        f.usdc,
+        f.token,
         f.feeRecipient,
         450n
       );

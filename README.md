@@ -5,7 +5,7 @@
 
 | 폴더 | 내용 | 기술 |
 | --- | --- | --- |
-| `blockchain/` | ChainBuy · MockUSDC 컨트랙트 | Solidity 0.8.24, Hardhat, OpenZeppelin 5 |
+| `blockchain/` | ChainBuy · ChainBuyUSD 컨트랙트 | Solidity 0.8.24, Hardhat, OpenZeppelin 5 |
 | `frontend/` | 웹 화면 | Next.js 15, wagmi · viem, TanStack Query, Tailwind |
 | `backend/server/` | API + AI 구매 에이전트 | FastAPI, SQLAlchemy, Alembic, PostgreSQL, JWT |
 | `mock/` | 외부 쇼핑몰 · 일회용 카드 발급사 · 택배사 흉내 | FastAPI |

@@ -7,7 +7,7 @@ import { localDeployment } from "./contracts.generated";
 export const CHAINBUY_ADDRESS = (process.env.NEXT_PUBLIC_CHAINBUY_ADDRESS ?? localDeployment?.ChainBuy) as
   | `0x${string}`
   | undefined;
-export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS ?? localDeployment?.MockUSDC) as
+export const TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_TOKEN_ADDRESS ?? localDeployment?.ChainBuyUSD) as
   | `0x${string}`
   | undefined;
 

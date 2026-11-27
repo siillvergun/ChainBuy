@@ -19,14 +19,14 @@ async function main() {
   const buyers = signers.slice(8, 20);
   const reviewer = signers[1];
 
-  const usdc = await ethers.getContractAt("MockUSDC", dep.MockUSDC);
+  const token = await ethers.getContractAt("ChainBuyUSD", dep.ChainBuyUSD);
   const cb = await ethers.getContractAt("ChainBuy", dep.ChainBuy);
   const won = (n: number) => ethers.parseUnits(String(n), 6);
 
   // 모든 로컬 계정에 테스트 토큰 지급 (MetaMask로 hardhat 계정을 가져와 쓰는 경우 대비)
   for (const s of signers) {
-    await (await usdc.mint(s.address, won(10_000_000))).wait();
-    await (await usdc.connect(s).approve(dep.ChainBuy, ethers.MaxUint256)).wait();
+    await (await token.mint(s.address, won(10_000_000))).wait();
+    await (await token.connect(s).approve(dep.ChainBuy, ethers.MaxUint256)).wait();
   }
 
   const now = await time.latest();

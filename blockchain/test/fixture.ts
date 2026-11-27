@@ -27,9 +27,9 @@ export async function deployFixture() {
   const [admin, reviewer, agent, feeRecipient, seller, cardIssuer, creator, alice, bob, carol, mallory] =
     await ethers.getSigners();
 
-  const usdc = await ethers.deployContract("MockUSDC");
+  const token = await ethers.deployContract("ChainBuyUSD");
   const chainBuy = await ethers.deployContract("ChainBuy", [
-    await usdc.getAddress(),
+    await token.getAddress(),
     admin.address,
     feeRecipient.address,
     FEE_BPS,
@@ -42,8 +42,8 @@ export async function deployFixture() {
   await chainBuy.connect(admin).setMerchant(MERCHANT_ID, cardIssuer.address, true);
 
   for (const u of [alice, bob, carol, mallory, cardIssuer]) {
-    await usdc.mint(u.address, 1_000_000_000n);
-    await usdc.connect(u).approve(cbAddr, ethers.MaxUint256);
+    await token.mint(u.address, 1_000_000_000n);
+    await token.connect(u).approve(cbAddr, ethers.MaxUint256);
   }
 
   async function params(overrides: Partial<{ maxPrice: bigint; targetQty: number; maxPerUser: number; days: bigint }> = {}) {
@@ -82,7 +82,7 @@ export async function deployFixture() {
   }
 
   return {
-    usdc,
+    token,
     chainBuy,
     admin,
     reviewer,

@@ -87,14 +87,14 @@ describe("01. 공구 생성 · 참여 · 마감 · 미달 환불", () => {
 
   describe("참여·예치", () => {
     it("입점 상품은 최대 가격 × 수량, 외부 상품은 수수료 5%를 더해 예치한다 (DEP-01)", async () => {
-      const { chainBuy, usdc, alice, createListed, createExternal } = await loadFixture(deployFixture);
+      const { chainBuy, token, alice, createListed, createExternal } = await loadFixture(deployFixture);
       const listed = await createListed();
       const external = await createExternal();
       expect(await chainBuy.depositAmount(listed, 2)).to.equal(MAX_PRICE * 2n);
       expect(await chainBuy.depositAmount(external, 2)).to.equal(10_500n * 2n);
 
       await expect(chainBuy.connect(alice).deposit(listed, 2, ethers.id("a"))).to.changeTokenBalances(
-        usdc,
+        token,
         [alice, chainBuy],
         [-20_000n, 20_000n]
       );
@@ -134,11 +134,11 @@ describe("01. 공구 생성 · 참여 · 마감 · 미달 환불", () => {
     });
 
     it("마감 전에는 참여를 취소하고 전액 돌려받는다 (DEP-05)", async () => {
-      const { chainBuy, usdc, alice, createListed } = await loadFixture(deployFixture);
+      const { chainBuy, token, alice, createListed } = await loadFixture(deployFixture);
       const id = await createListed();
       await chainBuy.connect(alice).deposit(id, 2, ethers.ZeroHash);
       await expect(chainBuy.connect(alice).withdraw(id)).to.changeTokenBalances(
-        usdc,
+        token,
         [alice, chainBuy],
         [20_000n, -20_000n]
       );
@@ -173,7 +173,7 @@ describe("01. 공구 생성 · 참여 · 마감 · 미달 환불", () => {
     });
 
     it("마감 시각까지 미달이면 실패하고, 참여자는 전액 환불받는다 (RF-02)", async () => {
-      const { chainBuy, usdc, alice, bob, createExternal } = await loadFixture(deployFixture);
+      const { chainBuy, token, alice, bob, createExternal } = await loadFixture(deployFixture);
       const id = await createExternal();
       await chainBuy.connect(alice).deposit(id, 1, ethers.ZeroHash);
       await chainBuy.connect(bob).deposit(id, 1, ethers.ZeroHash);
@@ -182,13 +182,13 @@ describe("01. 공구 생성 · 참여 · 마감 · 미달 환불", () => {
 
       expect(await chainBuy.refundableAmount(id, alice.address)).to.equal(10_500n);
       await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalances(
-        usdc,
+        token,
         [alice, chainBuy],
         [10_500n, -10_500n]
       );
       await expect(chainBuy.connect(alice).refund(id)).to.be.revertedWithCustomError(chainBuy, "AlreadyRefunded");
       await chainBuy.connect(bob).refund(id);
-      expect(await usdc.balanceOf(await chainBuy.getAddress())).to.equal(0n);
+      expect(await token.balanceOf(await chainBuy.getAddress())).to.equal(0n);
     });
 
     it("모집 중에는 환불을 요청할 수 없다", async () => {

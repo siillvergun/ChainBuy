@@ -67,20 +67,20 @@ describe("02. AI 확인 · 담당자 승인 · 취소", () => {
   });
 
   it("담당자가 거절하면 취소되고 전액 환불된다 (RF-03)", async () => {
-    const { chainBuy, usdc, reviewer, alice, createListed, fillAndFinalize } = await loadFixture(deployFixture);
+    const { chainBuy, token, reviewer, alice, createListed, fillAndFinalize } = await loadFixture(deployFixture);
     const id = await createListed();
     await fillAndFinalize(id);
     await chainBuy.connect(reviewer).reject(id);
     expect((await chainBuy.getGroup(id)).status).to.equal(Status.CANCELLED);
-    await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(usdc, alice, MAX_PRICE);
+    await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(token, alice, MAX_PRICE);
   });
 
   it("가격 초과·품절이면 AI가 취소하고 전액 환불된다 (AI-04, RF-03)", async () => {
-    const { chainBuy, usdc, agent, bob, createExternal, fillAndFinalize } = await loadFixture(deployFixture);
+    const { chainBuy, token, agent, bob, createExternal, fillAndFinalize } = await loadFixture(deployFixture);
     const id = await createExternal();
     await fillAndFinalize(id);
     await expect(chainBuy.connect(agent).cancel(id)).to.emit(chainBuy, "Cancelled").withArgs(id);
-    await expect(chainBuy.connect(bob).refund(id)).to.changeTokenBalance(usdc, bob, 10_500n);
+    await expect(chainBuy.connect(bob).refund(id)).to.changeTokenBalance(token, bob, 10_500n);
   });
 
   it("승인 후에도 결제 전이면 담당자가 취소할 수 있다", async () => {
@@ -93,7 +93,7 @@ describe("02. AI 확인 · 담당자 승인 · 취소", () => {
   });
 
   it("승인 기한 7일 전에는 일반 사용자가 취소할 수 없고, 지나면 누구나 취소할 수 있다 (RF-05, NFR-05)", async () => {
-    const { chainBuy, usdc, mallory, alice, createListed, fillAndFinalize, checkAndApprove } =
+    const { chainBuy, token, mallory, alice, createListed, fillAndFinalize, checkAndApprove } =
       await loadFixture(deployFixture);
     const id = await createListed();
     await fillAndFinalize(id);
@@ -104,7 +104,7 @@ describe("02. AI 확인 · 담당자 승인 · 취소", () => {
 
     await time.increase(20n);
     await chainBuy.connect(mallory).cancel(id);
-    await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(usdc, alice, MAX_PRICE);
+    await expect(chainBuy.connect(alice).refund(id)).to.changeTokenBalance(token, alice, MAX_PRICE);
   });
 
   it("결제가 끝난 공구는 취소할 수 없다", async () => {
