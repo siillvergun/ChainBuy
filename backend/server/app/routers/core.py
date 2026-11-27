@@ -42,31 +42,34 @@ def short_id() -> str:
 # ─────────────── 공통 ───────────────
 
 
-@router.get("/health")
+@router.get("/health", summary="서버 상태 확인")
 def health():
+    """서버가 살아 있으면 {ok: true}"""
     return {"ok": True}
 
 
 class NonceIn(BaseModel):
-    address: str = ""
+    address: str = Field(default="", description="로그인할 지갑 주소")
 
 
-@router.post("/auth/nonce")
+@router.post("/auth/nonce", summary="로그인용 nonce 발급")
 def auth_nonce(body: NonceIn, db: Session = DB):
+    """지갑으로 서명할 일회용 메시지를 만든다. 받은 message를 MetaMask로 서명해 /auth/verify로 보낸다"""
     return issue_nonce(db, body.address)
 
 
 class VerifyIn(BaseModel):
-    address: str
-    signature: str = Field(pattern=r"^0x[0-9a-fA-F]+$")
+    address: str = Field(description="로그인할 지갑 주소")
+    signature: str = Field(pattern=r"^0x[0-9a-fA-F]+$", description="nonce 메시지에 대한 지갑 서명")
 
 
-@router.post("/auth/verify")
+@router.post("/auth/verify", summary="서명 검증 후 토큰 발급")
 def auth_verify(body: VerifyIn, db: Session = DB):
+    """nonce 메시지 서명이 그 지갑의 것인지 확인하고 Bearer 토큰을 준다. 응답에 공구 담당자·입점 담당자 여부가 포함된다"""
     return verify_login(db, body.address, body.signature)
 
 
-@router.get("/auth/me")
+@router.get("/auth/me", summary="내 로그인 정보")
 def auth_me(user: CurrentUser = AUTH):
     """저장해 둔 토큰이 아직 유효한지 확인 (만료 감지)"""
     return {
@@ -98,8 +101,9 @@ def product_out(p: Product, seller_name: str | None = None) -> dict:
     }
 
 
-@router.get("/products")
+@router.get("/products", summary="상품 목록")
 def products(db: Session = DB):
+    """입점 상품과 외부 상품을 최신 순으로 돌려준다. 로그인 없이 볼 수 있다"""
     rows = db.execute(
         select(Product, Seller.name).outerjoin(Seller, Seller.id == Product.seller_id).order_by(Product.created_at.desc())
     ).all()
@@ -124,9 +128,9 @@ def seller_out(s: Seller) -> dict:
 
 
 class SellerIn(BaseModel):
-    name: str = Field(min_length=2, max_length=40)
-    bizNo: str = Field(pattern=r"^\d{3}-\d{2}-\d{5}$")
-    contact: str = Field(min_length=5, max_length=80)
+    name: str = Field(min_length=2, max_length=40, description="상호")
+    bizNo: str = Field(pattern=r"^\d{3}-\d{2}-\d{5}$", description="사업자등록번호 (000-00-00000)")
+    contact: str = Field(min_length=5, max_length=80, description="연락처 (전화번호 또는 이메일)")
 
     @field_validator("name", "bizNo", "contact", mode="before")
     @classmethod
@@ -134,8 +138,9 @@ class SellerIn(BaseModel):
         return v.strip() if isinstance(v, str) else v
 
 
-@router.post("/sellers", status_code=201)
+@router.post("/sellers", summary="판매자 입점 신청", status_code=201)
 def seller_apply(body: SellerIn, user: CurrentUser = AUTH, db: Session = DB):
+    """로그인한 지갑으로 입점을 신청한다. 반려된 신청은 다시 낼 수 있다. 승인은 입점 담당자가 한다"""
     exists = db.scalar(select(Seller).where(Seller.address == user.address))
     if exists and exists.status != "rejected":
         raise ApiError(409, "이미 신청한 지갑이에요.")
@@ -148,8 +153,9 @@ def seller_apply(body: SellerIn, user: CurrentUser = AUTH, db: Session = DB):
     return seller_out(s)
 
 
-@router.get("/sellers/me")
+@router.get("/sellers/me", summary="내 입점 신청 상태")
 def seller_me(user: CurrentUser = AUTH, db: Session = DB):
+    """신청 내역이 없으면 null"""
     s = db.scalar(select(Seller).where(Seller.address == user.address))
     return seller_out(s) if s else None
 
@@ -162,12 +168,12 @@ def approved_seller(db: Session, address: str) -> Seller:
 
 
 class ProductIn(BaseModel):
-    name: str = Field(min_length=2, max_length=60)
-    category: str
-    option: str = Field(min_length=1, max_length=40)
-    originalPrice: int = Field(gt=0)
-    price: int = Field(gt=0)
-    description: str = Field(default="", max_length=1000)
+    name: str = Field(min_length=2, max_length=60, description="상품명")
+    category: str = Field(description="카테고리 (config.CATEGORIES 중 하나)")
+    option: str = Field(min_length=1, max_length=40, description="옵션 (예: 200g, 블랙)")
+    originalPrice: int = Field(gt=0, description="정가 (원)")
+    price: int = Field(gt=0, description="공구가 (원, 정가 이하)")
+    description: str = Field(default="", max_length=1000, description="상품 설명")
 
     @field_validator("category")
     @classmethod
@@ -183,8 +189,9 @@ class ProductIn(BaseModel):
         return self
 
 
-@router.post("/products", status_code=201)
+@router.post("/products", summary="상품 등록", status_code=201)
 def product_create(raw: dict = Body(...), user: CurrentUser = AUTH, db: Session = DB):
+    """승인된 판매자만 등록할 수 있다. 공구가는 정가 이하여야 한다"""
     seller = approved_seller(db, user.address)
     body = validate(ProductIn, raw)
     p = Product(
@@ -205,8 +212,9 @@ def product_create(raw: dict = Body(...), user: CurrentUser = AUTH, db: Session 
     return product_out(p, seller.name)
 
 
-@router.get("/products/mine")
+@router.get("/products/mine", summary="내가 등록한 상품")
 def products_mine(user: CurrentUser = AUTH, db: Session = DB):
+    """승인된 판매자 전용"""
     seller = approved_seller(db, user.address)
     rows = db.scalars(select(Product).where(Product.seller_id == seller.id).order_by(Product.created_at.desc())).all()
     return [product_out(p, seller.name) for p in rows]
@@ -232,16 +240,16 @@ def check_mall_url(raw: str) -> tuple[str, str]:
 
 
 class ProposalIn(BaseModel):
-    url: str
-    name: str = Field(min_length=2, max_length=60)
-    category: str
-    option: str = Field(min_length=1, max_length=40)
-    currentPrice: int = Field(gt=0)
-    maxPrice: int = Field(gt=0)
-    targetQty: int = Field(ge=2, le=1000)
-    maxPerUser: int = Field(ge=1)
-    days: int = Field(ge=1, le=30)
-    reason: str = Field(default="", max_length=300)
+    url: str = Field(description="상품 링크 (쿠팡·네이버 스마트스토어·11번가 https)")
+    name: str = Field(min_length=2, max_length=60, description="상품명")
+    category: str = Field(description="카테고리 (config.CATEGORIES 중 하나)")
+    option: str = Field(min_length=1, max_length=40, description="옵션")
+    currentPrice: int = Field(gt=0, description="지금 쇼핑몰 가격 (원)")
+    maxPrice: int = Field(gt=0, description="이 가격을 넘으면 결제하지 않는 상한 (원)")
+    targetQty: int = Field(ge=2, le=1000, description="목표 수량")
+    maxPerUser: int = Field(ge=1, description="1인 최대 수량")
+    days: int = Field(ge=1, le=30, description="모집 기간 (일)")
+    reason: str = Field(default="", max_length=300, description="제안 이유")
 
     @field_validator("category")
     @classmethod
@@ -288,8 +296,9 @@ def proposals_query():
     return select(Proposal, Product).join(Product, Product.id == Proposal.product_id)
 
 
-@router.post("/proposals", status_code=201)
+@router.post("/proposals", summary="외부 상품 공구 제안", status_code=201)
 def proposal_create(body: ProposalIn, user: CurrentUser = AUTH, db: Session = DB):
+    """쿠팡·네이버 스마트스토어·11번가 https 링크만 받는다. 공구 담당자가 검토 후 체인에 공구를 연다"""
     url, merchant_id = check_mall_url(body.url)
     now = now_ms()
     p = Product(
@@ -323,8 +332,9 @@ def proposal_create(body: ProposalIn, user: CurrentUser = AUTH, db: Session = DB
     return proposal_out(pr, p)
 
 
-@router.get("/proposals/mine")
+@router.get("/proposals/mine", summary="내 공구 제안 목록")
 def proposals_mine(user: CurrentUser = AUTH, db: Session = DB):
+    """내가 낸 제안과 검토 상태(대기·승인·반려)를 최신 순으로 돌려준다"""
     rows = db.execute(proposals_query().where(Proposal.proposer == user.address).order_by(Proposal.created_at.desc())).all()
     return [proposal_out(pr, p) for pr, p in rows]
 
@@ -335,17 +345,19 @@ def proposals_mine(user: CurrentUser = AUTH, db: Session = DB):
 
 
 class ReasonIn(BaseModel):
-    reason: str = Field(min_length=1, max_length=200)
+    reason: str = Field(min_length=1, max_length=200, description="반려 사유")
 
 
-@router.get("/admin/sellers")
+@router.get("/admin/sellers", summary="입점 신청 목록 (입점 담당자)")
 def admin_sellers(_: CurrentUser = SELLER_MANAGER, db: Session = DB):
+    """대기 중인 신청이 먼저 나온다"""
     rows = db.scalars(select(Seller).order_by(case((Seller.status == "pending", 0), else_=1), Seller.created_at.desc())).all()
     return [seller_out(s) for s in rows]
 
 
-@router.post("/admin/sellers/{seller_id}/approve")
+@router.post("/admin/sellers/{seller_id}/approve", summary="입점 승인 (입점 담당자)")
 def admin_seller_approve(seller_id: str, _: CurrentUser = SELLER_MANAGER, db: Session = DB):
+    """입점 담당자가 자기 지갑으로 setSeller 트랜잭션을 먼저 보내야 한다. 서버는 체인에 등록됐는지 확인한 뒤에만 승인 처리한다"""
     s = db.get(Seller, seller_id)
     if not s:
         raise ApiError(404, "신청을 찾을 수 없어요.")
@@ -356,8 +368,9 @@ def admin_seller_approve(seller_id: str, _: CurrentUser = SELLER_MANAGER, db: Se
     return seller_out(s)
 
 
-@router.post("/admin/sellers/{seller_id}/reject")
+@router.post("/admin/sellers/{seller_id}/reject", summary="입점 반려 (입점 담당자)")
 def admin_seller_reject(seller_id: str, body: ReasonIn, _: CurrentUser = SELLER_MANAGER, db: Session = DB):
+    """대기 중인 신청만 반려할 수 있다"""
     s = db.get(Seller, seller_id)
     if not s or s.status != "pending":
         raise ApiError(404, "대기 중인 신청이 아니에요.")
@@ -365,18 +378,20 @@ def admin_seller_reject(seller_id: str, body: ReasonIn, _: CurrentUser = SELLER_
     return {"ok": True}
 
 
-@router.get("/admin/proposals")
+@router.get("/admin/proposals", summary="공구 제안 목록 (공구 담당자)")
 def admin_proposals(_: CurrentUser = REVIEWER, db: Session = DB):
+    """대기 중인 제안이 먼저 나온다"""
     rows = db.execute(proposals_query().order_by(case((Proposal.status == "pending", 0), else_=1), Proposal.created_at.desc())).all()
     return [proposal_out(pr, p) for pr, p in rows]
 
 
 class ApproveProposalIn(BaseModel):
-    groupId: int = Field(gt=0)
+    groupId: int = Field(gt=0, description="createExternalGroup으로 체인에 만든 공구 번호")
 
 
-@router.post("/admin/proposals/{proposal_id}/approve")
+@router.post("/admin/proposals/{proposal_id}/approve", summary="공구 제안 승인 (공구 담당자)")
 def admin_proposal_approve(proposal_id: str, body: ApproveProposalIn, _: CurrentUser = REVIEWER, db: Session = DB):
+    """공구 담당자가 createExternalGroup 트랜잭션을 먼저 보내야 한다. 체인의 공구가 제안 내용(상품·쇼핑몰·제안자)과 같을 때만 승인된다"""
     row = db.execute(proposals_query().where(Proposal.id == proposal_id)).first()
     if not row or row[0].status != "pending":
         raise ApiError(404, "대기 중인 제안이 아니에요.")
@@ -395,8 +410,9 @@ def admin_proposal_approve(proposal_id: str, body: ApproveProposalIn, _: Current
     return proposal_out(pr, p)
 
 
-@router.post("/admin/proposals/{proposal_id}/reject")
+@router.post("/admin/proposals/{proposal_id}/reject", summary="공구 제안 반려 (공구 담당자)")
 def admin_proposal_reject(proposal_id: str, body: ReasonIn, _: CurrentUser = REVIEWER, db: Session = DB):
+    """대기 중인 제안만 반려할 수 있다"""
     pr = db.get(Proposal, proposal_id)
     if not pr or pr.status != "pending":
         raise ApiError(404, "대기 중인 제안이 아니에요.")
@@ -407,7 +423,7 @@ def admin_proposal_reject(proposal_id: str, body: ReasonIn, _: CurrentUser = REV
 # ─────────────── 진행 기록 (에이전트 활동) ───────────────
 
 
-@router.get("/groups/{group_id}/activity")
+@router.get("/groups/{group_id}/activity", summary="공구 진행 기록")
 def group_activity(group_id: int, db: Session = DB):
     """에이전트가 이 공구에 한 일 (상품 확인 결과·결제·주문·배송·수수료). 최신 순"""
     import json as _json

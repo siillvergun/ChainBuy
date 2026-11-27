@@ -47,8 +47,9 @@ def shipment_out(sh: Shipment | None) -> dict | None:
     return {"trackingNo": sh.tracking_no, "carrier": sh.carrier, "createdAt": sh.created_at, "deliveryStatus": status}
 
 
-@router.get("/seller/groups/{group_id}/orders")
+@router.get("/seller/groups/{group_id}/orders", summary="내 공구 참여자·배송지 목록 (판매자)")
 def orders(group_id: int, user: CurrentUser = AUTH, db: Session = DB):
+    """체인의 참여 기록을 기준으로 배송지를 붙인다. 참여할 때 남긴 배송지 해시와 지금 배송지가 같은지(shippingMatches)도 보여 준다"""
     g = my_group(db, user, group_id)
     rows = []
     for wallet in participants(group_id):
@@ -85,12 +86,13 @@ def orders(group_id: int, user: CurrentUser = AUTH, db: Session = DB):
 
 
 class ShipmentIn(BaseModel):
-    trackingNo: str = Field(pattern=r"^[0-9A-Za-z-]{6,30}$")
-    carrier: str = Field(default="mock", max_length=20)
+    trackingNo: str = Field(pattern=r"^[0-9A-Za-z-]{6,30}$", description="운송장 번호")
+    carrier: str = Field(default="mock", max_length=20, description="택배사 (데모는 mock)")
 
 
-@router.post("/seller/groups/{group_id}/shipment", status_code=201)
+@router.post("/seller/groups/{group_id}/shipment", summary="운송장 등록 (판매자)", status_code=201)
 def register_shipment(group_id: int, body: ShipmentIn, user: CurrentUser = AUTH, db: Session = DB):
+    """결제가 끝난 공구에만 등록할 수 있다. 택배사에도 등록하고, 배송 완료는 에이전트가 확인해 체인에 기록한다"""
     g = my_group(db, user, group_id)
     if STATUS[g["status"]] != "PAID":
         raise ApiError(409, "결제가 완료된 공구에만 운송장을 등록할 수 있어요.")
