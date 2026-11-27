@@ -1,0 +1,25 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "ChainBuyUSD": "0x54D2C09A1ceBcFE290F02926A72674553D0904F3",
+  "ChainBuy": "0x36494609327DD217d04f97f7793cdd69D7ab6C26",
+  "deployBlock": 12225132,
+  "feeBps": 500,
+  "roles": {
+    "admin": "0x6E958D4B1baADBfA5e1eC1bdf4F554a1b617f1d8",
+    "reviewer": "0xc87a4D9Be66E1d5874C994CC56E3747035a4CabA",
+    "sellerManager": "0xf30ad2988Ec441beA39aF6487f228Ea57037585a",
+    "agent": "0xAAADe834Aeacc4fcE2aF1DBbEEB1Ec906365BA2c",
+    "feeRecipient": "0x6E958D4B1baADBfA5e1eC1bdf4F554a1b617f1d8"
+  },
+  "merchant": {
+    "merchantId": "0x527c5a73bf707b7145c50c4faf59a95880febdfd5aa72d08be8c6ac98da4f6c8",
+    "cardIssuer": "0xa5Af3c04A11457b8A055CDa13d53371c946aBDAc"
+  },
+  "accountAbstraction": {
+    "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+    "accountFactory": "0x732B44C990026209e32D366606C6C3EE7d8CFEE6",
+    "paymaster": "0xe41221b7af4C6ec146B74D0eebA6E4156CB2Bef7",
+    "sponsor": "0x2C4Cf0E24066e02b5439Bd7dA0D2e4b114BBb9Ce"
+  }
+}
