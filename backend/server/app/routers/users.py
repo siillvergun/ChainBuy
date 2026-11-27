@@ -46,11 +46,11 @@ def user_out(address: str, u: User | None) -> dict:
 
 
 class ShippingIn(BaseModel):
-    name: str = Field(min_length=1, max_length=20)
-    phone: str = Field(pattern=r"^[0-9-]{9,14}$")
-    zip: str = Field(pattern=r"^\d{5}$")
-    address1: str = Field(min_length=5, max_length=100)
-    address2: str = Field(default="", max_length=60)
+    name: str = Field(min_length=1, max_length=20, description="받는 사람")
+    phone: str = Field(pattern=r"^[0-9-]{9,14}$", description="전화번호")
+    zip: str = Field(pattern=r"^\d{5}$", description="우편번호 5자리")
+    address1: str = Field(min_length=5, max_length=100, description="기본 주소")
+    address2: str = Field(default="", max_length=60, description="상세 주소")
 
     @field_validator("name", "phone", "zip", "address1", "address2", mode="before")
     @classmethod
@@ -59,18 +59,20 @@ class ShippingIn(BaseModel):
 
 
 class UserIn(BaseModel):
-    nickname: str = Field(default="", max_length=20)
-    contact: str = Field(default="", max_length=80)
-    shipping: ShippingIn | None = None
+    nickname: str = Field(default="", max_length=20, description="닉네임")
+    contact: str = Field(default="", max_length=80, description="연락처")
+    shipping: ShippingIn | None = Field(default=None, description="배송지 (null이면 삭제)")
 
 
-@router.get("/users/me")
+@router.get("/users/me", summary="내 프로필·배송지")
 def user_me(user: CurrentUser = AUTH, db: Session = DB):
+    """체인에 올릴 배송지 해시(recipientHash)도 함께 돌려준다"""
     return user_out(user.address, db.get(User, user.address))
 
 
-@router.put("/users/me")
+@router.put("/users/me", summary="내 프로필·배송지 저장")
 def user_save(body: UserIn, user: CurrentUser = AUTH, db: Session = DB):
+    """배송지 원문은 서버에만 저장하고, 체인에는 솔트를 섞은 해시만 올라간다"""
     u = db.get(User, user.address)
     if not u:
         u = User(address=user.address, salt=secrets.token_hex(16), updated_at=now_ms())
@@ -88,11 +90,11 @@ def user_save(body: UserIn, user: CurrentUser = AUTH, db: Session = DB):
 
 
 class SellerPatchIn(BaseModel):
-    name: str = Field(min_length=2, max_length=40)
-    contact: str = Field(min_length=5, max_length=80)
+    name: str = Field(min_length=2, max_length=40, description="상호")
+    contact: str = Field(min_length=5, max_length=80, description="연락처")
 
 
-@router.patch("/sellers/me")
+@router.patch("/sellers/me", summary="판매자 정보 수정")
 def seller_patch(body: SellerPatchIn, user: CurrentUser = AUTH, db: Session = DB):
     """판매자 정보 수정: 상호·연락처만 (사업자등록번호와 정산 지갑은 바꿀 수 없음)"""
     s = db.scalar(select(Seller).where(Seller.address == user.address, Seller.status != "rejected"))
@@ -106,19 +108,22 @@ def seller_patch(body: SellerPatchIn, user: CurrentUser = AUTH, db: Session = DB
 # 참여(예치)하기 전에 관심 있는 공구를 담아 둔다. 돈과 무관해서 체인에 올리지 않는다.
 
 
-@router.get("/likes")
+@router.get("/likes", summary="내가 찜한 공구 번호")
 def likes_mine(user: CurrentUser = AUTH, db: Session = DB):
+    """최근에 찜한 순서"""
     return list(db.scalars(select(Like.group_id).where(Like.address == user.address).order_by(Like.created_at.desc())).all())
 
 
-@router.get("/likes/counts")
+@router.get("/likes/counts", summary="공구별 찜 개수")
 def likes_counts(db: Session = DB):
+    """{공구 번호: 찜 개수} 형태"""
     rows = db.execute(select(Like.group_id, func.count()).group_by(Like.group_id)).all()
     return {str(gid): n for gid, n in rows}
 
 
-@router.post("/likes/{group_id}", status_code=201)
+@router.post("/likes/{group_id}", summary="공구 찜하기", status_code=201)
 def like_add(group_id: int, user: CurrentUser = AUTH, db: Session = DB):
+    """이미 찜했으면 그대로 둔다"""
     if group_id <= 0:
         raise ApiError(400, "공구 번호가 올바르지 않아요.")
     g = onchain_group(group_id)
@@ -128,7 +133,8 @@ def like_add(group_id: int, user: CurrentUser = AUTH, db: Session = DB):
     return {"groupId": group_id, "liked": True}
 
 
-@router.delete("/likes/{group_id}")
+@router.delete("/likes/{group_id}", summary="찜 취소")
 def like_remove(group_id: int, user: CurrentUser = AUTH, db: Session = DB):
+    """찜하지 않은 공구여도 오류 없이 처리한다"""
     db.execute(delete(Like).where(Like.address == user.address, Like.group_id == group_id))
     return {"groupId": group_id, "liked": False}

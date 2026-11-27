@@ -25,8 +25,9 @@ def remember_account(db: Session, owner: str, account: str) -> None:
         db.add(SmartAccount(account=account, owner=owner, created_at=now_ms()))
 
 
-@router.get("/aa/account")
+@router.get("/aa/account", summary="내 스마트 지갑 주소")
 def my_account(user: CurrentUser = AUTH, db: Session = DB):
+    """MetaMask 주소가 주인인 스마트 지갑 주소. 아직 체인에 만들어지지 않았으면 deployed=false (첫 거래 때 함께 만들어진다)"""
     account = aa.account_of(user.address)
     remember_account(db, user.address, account)
     return {"owner": user.address, "account": account, "deployed": aa.is_deployed(account)}
@@ -49,7 +50,7 @@ def require_quota(db: Session, account: str) -> None:
         raise ApiError(429, f"가스비 대납은 하루 {limit}번까지예요. 내일 다시 시도해 주세요.")
 
 
-@router.post("/aa/prepare")
+@router.post("/aa/prepare", summary="가스비 대납 요청 만들기")
 def prepare(body: PrepareIn, user: CurrentUser = AUTH, db: Session = DB):
     """서명할 UserOperation을 만든다. 응답의 userOpHash를 MetaMask로 서명해 /aa/send로 보낸다"""
     account = aa.account_of(user.address)
@@ -59,10 +60,10 @@ def prepare(body: PrepareIn, user: CurrentUser = AUTH, db: Session = DB):
 
 
 class SendIn(BaseModel):
-    userOp: dict
+    userOp: dict = Field(description="/aa/prepare가 준 userOp에 사용자 서명(signature)을 넣은 것")
 
 
-@router.post("/aa/send")
+@router.post("/aa/send", summary="서명한 요청 제출")
 def send(body: SendIn, user: CurrentUser = AUTH, db: Session = DB):
     """사용자가 서명한 UserOperation을 EntryPoint에 제출한다 (서버가 번들러 역할, 가스비는 Paymaster)"""
     op = aa.from_json(body.userOp)
