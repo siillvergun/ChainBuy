@@ -23,6 +23,11 @@ def calldata(name: str, types: list[str], args: list) -> str:
 
 def send(key: str, data: str, to: str | None = None) -> str:
     """트랜잭션을 서명해 보내고 영수증까지 기다린 뒤 tx 해시를 돌려준다"""
+    return send_and_wait(key, data, to)["transactionHash"]
+
+
+def send_and_wait(key: str, data: str, to: str | None = None) -> dict:
+    """트랜잭션을 서명해 보내고 영수증(로그 포함)을 돌려준다. 실패하면 예외"""
     to = to or chainbuy_address()
     acct = Account.from_key(key)
     tx = {
@@ -41,7 +46,7 @@ def send(key: str, data: str, to: str | None = None) -> str:
         if r:
             if int(r["status"], 16) != 1:
                 raise RuntimeError(f"트랜잭션 실패: {h}")
-            return h
+            return r
         time.sleep(1)
     raise RuntimeError(f"영수증 대기 시간 초과: {h}")
 

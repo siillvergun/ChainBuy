@@ -17,7 +17,7 @@ from ..config import settings
 from ..db import CommitRoute
 from ..errors import ApiError
 from ..eth_tx import participants
-from ..models import Seller, Shipment, User
+from ..models import Seller, Shipment, SmartAccount, User
 from .users import recipient_hash
 
 router = APIRouter(route_class=CommitRoute)
@@ -55,7 +55,10 @@ def orders(group_id: int, user: CurrentUser = AUTH, db: Session = DB):
         p = participant(group_id, wallet)
         if p["qty"] == 0:
             continue
-        u = db.get(User, wallet) or db.scalar(select(User).where(User.address.ilike(wallet)))
+        # 스마트 지갑으로 참여했으면 주인(MetaMask) 주소의 프로필에서 배송지를 찾는다
+        smart = db.scalar(select(SmartAccount).where(SmartAccount.account.ilike(wallet)))
+        profile_address = smart.owner if smart else wallet
+        u = db.get(User, profile_address) or db.scalar(select(User).where(User.address.ilike(profile_address)))
         current = recipient_hash(u) if u else None
         rows.append(
             {
